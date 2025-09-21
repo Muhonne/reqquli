@@ -1,0 +1,212 @@
+/* Design System - Refined with Precision
+   Inspired by the intersection of Swiss typography and technical documentation */
+
+:root {
+  /* Color System - Each hue serves a singular purpose */
+  --color-ink: #1a1a1a;              /* Primary text - deeper than before */
+  --color-paper: #fafafa;             /* Background - warmer white */
+  --color-canvas: #ffffff;            /* Cards and surfaces */
+  --color-border: #e5e5e5;            /* Subtle divisions */
+  --color-border-hover: #d0d0d0;      /* Interactive feedback */
+  
+  /* Semantic Colors - Restrained and purposeful */
+  --color-success: #059669;           /* Emerald 600 - Passed tests */
+  --color-error: #dc2626;             /* Red 600 - Critical failures */
+  --color-warning: #d97706;           /* Amber 600 - Warnings */
+  --color-info: #2563eb;              /* Blue 600 - Information */
+  --color-pending: #6b7280;           /* Gray 500 - Pending states */
+  
+  /* Interactive States */
+  --color-focus: #3b82f6;             /* Blue 500 - Focus rings */
+  --color-selection: #dbeafe;         /* Blue 100 - Selected items */
+  
+  /* Typography Scale - Perfect fourth (1.333) */
+  --font-size-xs: 0.75rem;            /* 12px - Metadata */
+  --font-size-sm: 0.875rem;           /* 14px - Secondary text */
+  --font-size-base: 1rem;             /* 16px - Body text */
+  --font-size-lg: 1.125rem;           /* 18px - Emphasized text */
+  --font-size-xl: 1.5rem;             /* 24px - Section headers */
+  --font-size-2xl: 2rem;              /* 32px - Page titles */
+  
+  /* Font Families */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  
+  /* Spacing Scale - Based on 4px grid */
+  --space-0: 0;
+  --space-1: 0.25rem;                 /* 4px */
+  --space-2: 0.5rem;                  /* 8px */
+  --space-3: 0.75rem;                 /* 12px */
+  --space-4: 1rem;                    /* 16px */
+  --space-5: 1.25rem;                 /* 20px */
+  --space-6: 1.5rem;                  /* 24px */
+  --space-8: 2rem;                    /* 32px */
+  --space-10: 2.5rem;                 /* 40px */
+  --space-12: 3rem;                   /* 48px */
+  
+  /* Border Radius - Subtle, not decorative */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  
+  /* Shadows - Barely perceptible depth */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  
+  /* Transitions - Swift and purposeful */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base Typography */
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  color: var(--color-ink);
+  background-color: var(--color-paper);
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Monospace for technical elements */
+.font-mono,
+code,
+pre,
+.requirement-id,
+.timestamp {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  letter-spacing: -0.02em;
+}
+
+/* Headers - Clear hierarchy */
+h1 { 
+  font-size: var(--font-size-xl); 
+  font-weight: 600; 
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+h2 { 
+  font-size: var(--font-size-xl); 
+  font-weight: 600; 
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+h3 { 
+  font-size: var(--font-size-lg); 
+  font-weight: 500; 
+  line-height: 1.4;
+}
+
+/* Interactive Elements */
+.interactive {
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.interactive:hover {
+  background-color: var(--color-paper);
+}
+
+.interactive:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -1px;
+}
+
+/* Input Focus Styling - Override browser defaults */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  border-color: var(--color-ink) !important;
+  box-shadow: none !important;
+}
+
+/* Ensure consistent focus styling for all form elements */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  outline: none;
+  border: 1px solid var(--color-ink);
+  box-shadow: none;
+}
+
+/* Cards - Subtle depth */
+.card {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
+}
+
+.card:hover {
+  border-color: var(--color-border-hover);
+}
+
+/* Status Indicators - Small, purposeful */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.status-indicator::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.status-approved { color: var(--color-success); }
+.status-draft { color: var(--color-pending); }
+.status-failed { color: var(--color-error); }
+.status-passed { color: var(--color-success); }
+.status-pending { color: var(--color-warning); }
+
+/* Loading States - Minimal */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.skeleton {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background: linear-gradient(90deg, 
+    var(--color-border) 25%, 
+    var(--color-paper) 50%, 
+    var(--color-border) 75%);
+}
+
+/* Scrollbars - Refined */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hover);
+}

@@ -1,0 +1,195 @@
+openapi: 3.0.3
+info:
+  title: Azure Reqquli API
+  description: |
+    API specification for Azure Reqquli - a compliance first requirements management system that supports 
+    user requirements, system requirements, manual tests, and test case results with complete traceability.
+    
+    ## Authentication
+    Most endpoints require JWT token authentication via the Authorization header.
+    
+    ## Rate Limiting
+    API calls are subject to rate limiting for performance and security.
+    
+    ## Error Handling
+    All endpoints return structured error responses with appropriate HTTP status codes.
+    
+  version: 1.0.0
+  contact:
+    name: Morgan - Backend Developer
+    email: morgan@azure-reqquli.com
+  license:
+    name: Proprietary
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+  - url: https://api.azure-reqquli.com
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Authentication
+  /auth/register:
+    $ref: './authentication.yaml#/paths/~1auth~1register'
+  /auth/login:
+    $ref: './authentication.yaml#/paths/~1auth~1login'
+  /auth/refresh:
+    $ref: './authentication.yaml#/paths/~1auth~1refresh'
+  /auth/verify-email/{token}:
+    $ref: './authentication.yaml#/paths/~1auth~1verify-email~1{token}'
+  /auth/resend-verification:
+    $ref: './authentication.yaml#/paths/~1auth~1resend-verification'
+  /auth/approvers:
+    $ref: './authentication.yaml#/paths/~1auth~1approvers'
+  /auth/logout:
+    $ref: './authentication.yaml#/paths/~1auth~1logout'
+
+  # User requirements
+  /user-requirements:
+    $ref: './user-requirements.yaml#/paths/~1user-requirements'
+  /user-requirements/{id}:
+    $ref: './user-requirements.yaml#/paths/~1user-requirements~1{id}'
+  /user-requirements/{id}/approve:
+    $ref: './user-requirements.yaml#/paths/~1user-requirements~1{id}~1approve'
+  /user-requirements/{id}/downstream-traces:
+    $ref: './user-requirements.yaml#/paths/~1user-requirements~1{id}~1downstream-traces'
+
+  # System requirements
+  /system-requirements:
+    $ref: './system-requirements.yaml#/paths/~1system-requirements'
+  /system-requirements/{id}:
+    $ref: './system-requirements.yaml#/paths/~1system-requirements~1{id}'
+  /system-requirements/{id}/approve:
+    $ref: './system-requirements.yaml#/paths/~1system-requirements~1{id}~1approve'
+  /system-requirements/trace-from/{userrequirementId}:
+    $ref: './system-requirements.yaml#/paths/~1system-requirements~1trace-from~1{userrequirementId}'
+
+  # Traces
+  /traces:
+    $ref: './traces.yaml#/paths/~1traces'
+  /traces/{fromId}/{toId}:
+    $ref: './traces.yaml#/paths/~1traces~1{fromId}~1{toId}'
+  /requirements/{id}/traces:
+    $ref: './traces.yaml#/paths/~1requirements~1{id}~1traces'
+
+  # Test Runs
+  /test-runs:
+    $ref: './test-runs.yaml#/paths/~1test-runs'
+  /test-runs/{runId}:
+    $ref: './test-runs.yaml#/paths/~1test-runs~1{runId}'
+  /test-runs/{runId}/approve:
+    $ref: './test-runs.yaml#/paths/~1test-runs~1{runId}~1approve'
+  /test-runs/{runId}/test-cases/{testCaseId}/execute:
+    $ref: './test-runs.yaml#/paths/~1test-runs~1{runId}~1test-cases~1{testCaseId}~1execute'
+  /test-runs/{runId}/test-cases/{testCaseId}/steps/{stepNumber}:
+    $ref: './test-runs.yaml#/paths/~1test-runs~1{runId}~1test-cases~1{testCaseId}~1steps~1{stepNumber}'
+  /test-runs/{runId}/test-cases/{testCaseId}/steps/{stepNumber}/upload:
+    $ref: './test-runs.yaml#/paths/~1test-runs~1{runId}~1test-cases~1{testCaseId}~1steps~1{stepNumber}~1upload'
+
+  # Test Cases
+  /test-cases:
+    $ref: './test-runs.yaml#/paths/~1test-cases'
+  /test-cases/{testCaseId}:
+    $ref: './test-runs.yaml#/paths/~1test-cases~1{testCaseId}'
+  /test-cases/{testCaseId}/approve:
+    $ref: './test-runs.yaml#/paths/~1test-cases~1{testCaseId}~1approve'
+  /test-cases/{testCaseId}/traces:
+    $ref: './test-runs.yaml#/paths/~1test-cases~1{testCaseId}~1traces'
+  /test-cases/{testCaseId}/results:
+    $ref: './test-runs.yaml#/paths/~1test-cases~1{testCaseId}~1results'
+
+  # Evidence
+  /evidence/{fileId}:
+    $ref: './test-runs.yaml#/paths/~1evidence~1{fileId}'
+
+  # Test Coverage
+  /requirements/{reqId}/test-coverage:
+    $ref: './test-runs.yaml#/paths/~1requirements~1{reqId}~1test-coverage'
+
+  # Audit
+  /audit/events:
+    $ref: './audit.yaml#/paths/~1audit~1events'
+  /audit/events/aggregate/{type}/{id}:
+    $ref: './audit.yaml#/paths/~1audit~1events~1aggregate~1{type}~1{id}'
+  /audit/events/user/{userId}:
+    $ref: './audit.yaml#/paths/~1audit~1events~1user~1{userId}'
+  /audit/events/log:
+    $ref: './audit.yaml#/paths/~1audit~1events~1log'
+  /audit/activity/users:
+    $ref: './audit.yaml#/paths/~1audit~1activity~1users'
+  /audit/metrics/system:
+    $ref: './audit.yaml#/paths/~1audit~1metrics~1system'
+  /audit/timeline:
+    $ref: './audit.yaml#/paths/~1audit~1timeline'
+
+  # System
+  /health:
+    $ref: './common.yaml#/paths/~1health'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      $ref: './common.yaml#/components/securitySchemes/bearerAuth'
+
+  schemas:
+    # Authentication
+    User:
+      $ref: './authentication.yaml#/components/schemas/User'
+    RegisterRequest:
+      $ref: './authentication.yaml#/components/schemas/RegisterRequest'
+    RegisterResponse:
+      $ref: './authentication.yaml#/components/schemas/RegisterResponse'
+    VerifyEmailResponse:
+      $ref: './authentication.yaml#/components/schemas/VerifyEmailResponse'
+    ResendVerificationRequest:
+      $ref: './authentication.yaml#/components/schemas/ResendVerificationRequest'
+    ResendVerificationResponse:
+      $ref: './authentication.yaml#/components/schemas/ResendVerificationResponse'
+    Approver:
+      $ref: './authentication.yaml#/components/schemas/Approver'
+    
+    # User requirements
+    Userrequirement:
+      $ref: './user-requirements.yaml#/components/schemas/Userrequirement'
+    
+    # System requirements
+    Systemrequirement:
+      $ref: './system-requirements.yaml#/components/schemas/Systemrequirement'
+
+    # Traces
+    requirementTrace:
+      $ref: './traces.yaml#/components/schemas/requirementTrace'
+    TraceRelationship:
+      $ref: './traces.yaml#/components/schemas/TraceRelationship'
+    CreateTraceRequest:
+      $ref: './traces.yaml#/components/schemas/CreateTraceRequest'
+    CreateTraceResponse:
+      $ref: './traces.yaml#/components/schemas/CreateTraceResponse'
+    DeleteTraceResponse:
+      $ref: './traces.yaml#/components/schemas/DeleteTraceResponse'
+    requirementTracesResponse:
+      $ref: './traces.yaml#/components/schemas/requirementTracesResponse'
+
+    # Common
+    ErrorResponse:
+      $ref: './common.yaml#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization endpoints
+  - name: User requirements
+    description: User requirements management
+  - name: System requirements
+    description: System requirements management
+  - name: Traces
+    description: requirements traceability management
+  - name: Test Runs
+    description: Test run execution and management
+  - name: Test Cases
+    description: Test case management
+  - name: Audit
+    description: Audit logging and activity tracking
+  - name: System
+    description: System monitoring and administrative functions

@@ -1,0 +1,962 @@
+paths:
+  /test-runs:
+    get:
+      tags:
+        - Test Runs
+      summary: List all test runs
+      description: Retrieve a list of all test runs with optional filtering
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of items per page
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [not_started, in_progress, complete, approved]
+          description: Filter by test run status
+        - in: query
+          name: creator
+          schema:
+            type: string
+            format: uuid
+          description: Filter by creator user ID
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+          description: Filter by creation date from
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+          description: Filter by creation date to
+      responses:
+        200:
+          description: Test runs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TestRun'
+                  meta:
+                    type: object
+                    properties:
+                      pagination:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          page:
+                            type: integer
+                          pages:
+                            type: integer
+                          limit:
+                            type: integer
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Test Runs
+      summary: Create a new test run
+      description: Create a new test run with selected test cases
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, testCaseIds]
+              properties:
+                name:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                testCaseIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+      responses:
+        200:
+          description: Test run created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testRun:
+                    $ref: '#/components/schemas/TestRun'
+                  testRunCases:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TestRunCase'
+        400:
+          $ref: '../common.yaml#/components/responses/BadRequest'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /test-runs/{runId}:
+    get:
+      tags:
+        - Test Runs
+      summary: Get test run details
+      description: Retrieve detailed information about a specific test run
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Test run details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testRun:
+                    $ref: '#/components/schemas/TestRun'
+                  testRunCases:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TestRunCase'
+                  testSteps:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/TestStep'
+                  testStepResults:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/TestStepResult'
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /test-runs/{runId}/approve:
+    put:
+      tags:
+        - Test Runs
+      summary: Approve a test run
+      description: Approve a completed test run with password confirmation
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  format: password
+      responses:
+        200:
+          description: Test run approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testRun:
+                    $ref: '#/components/schemas/TestRun'
+        400:
+          $ref: '../common.yaml#/components/responses/BadRequest'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /test-cases:
+    get:
+      tags:
+        - Test Cases
+      summary: List test cases
+      description: Retrieve a list of test cases, optionally filtered by status
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [draft, approved]
+            default: approved
+          description: Filter by test case status
+      responses:
+        200:
+          description: Test cases retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testCases:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TestCase'
+                  testSteps:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/TestStep'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Test Cases
+      summary: Create a new test case
+      description: Create a new test case with steps and optional requirement links
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description, steps]
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                steps:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [action, expectedResult]
+                    properties:
+                      action:
+                        type: string
+                      expectedResult:
+                        type: string
+                linkedrequirements:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        200:
+          description: Test case created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testCase:
+                    $ref: '#/components/schemas/TestCase'
+                  testSteps:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TestStep'
+        400:
+          $ref: '../common.yaml#/components/responses/BadRequest'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /test-cases/{testCaseId}:
+    get:
+      tags:
+        - Test Cases
+      summary: Get test case by ID
+      description: Retrieve a single test case with its steps
+      parameters:
+        - in: path
+          name: testCaseId
+          required: true
+          schema:
+            type: string
+          description: Test case ID
+      responses:
+        200:
+          description: Test case retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testCase:
+                    $ref: '#/components/schemas/TestCase'
+                  steps:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TestStep'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+    patch:
+      tags:
+        - Test Cases
+      summary: Update test case
+      description: Update an existing test case
+      parameters:
+        - in: path
+          name: testCaseId
+          required: true
+          schema:
+            type: string
+          description: Test case ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                steps:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      action:
+                        type: string
+                      expectedResult:
+                        type: string
+      responses:
+        200:
+          description: Test case updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testCase:
+                    $ref: '#/components/schemas/TestCase'
+        400:
+          $ref: '../common.yaml#/components/responses/BadRequest'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+    delete:
+      tags:
+        - Test Cases
+      summary: Delete test case
+      description: Delete a test case (soft delete)
+      parameters:
+        - in: path
+          name: testCaseId
+          required: true
+          schema:
+            type: string
+          description: Test case ID
+      responses:
+        200:
+          description: Test case deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /test-cases/{testCaseId}/approve:
+    put:
+      tags:
+        - Test Cases
+      summary: Approve a test case
+      description: Approve a draft test case with password confirmation
+      parameters:
+        - in: path
+          name: testCaseId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  format: password
+      responses:
+        200:
+          description: Test case approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testCase:
+                    $ref: '#/components/schemas/TestCase'
+        400:
+          $ref: '../common.yaml#/components/responses/BadRequest'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /test-cases/{testCaseId}/traces:
+    get:
+      tags:
+        - Test Cases
+      summary: Get test case traces
+      description: Retrieve upstream and downstream traces for a test case
+      parameters:
+        - in: path
+          name: testCaseId
+          required: true
+          schema:
+            type: string
+          description: Test case ID
+      responses:
+        200:
+          description: Traces retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  upstreamTraces:
+                    type: array
+                    items:
+                      $ref: '../traces.yaml#/components/schemas/requirementTrace'
+                  downstreamTraces:
+                    type: array
+                    items:
+                      $ref: '../traces.yaml#/components/schemas/requirementTrace'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /test-cases/{testCaseId}/results:
+    get:
+      tags:
+        - Test Cases
+      summary: Get test case execution history
+      description: Retrieve all test run executions for a specific test case
+      parameters:
+        - in: path
+          name: testCaseId
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Test case results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testCase:
+                    $ref: '#/components/schemas/TestCase'
+                  executions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        testRun:
+                          $ref: '#/components/schemas/TestRun'
+                        testRunCase:
+                          $ref: '#/components/schemas/TestRunCase'
+                        stepResults:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/TestStepResult'
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /test-runs/{runId}/test-cases/{testCaseId}/execute:
+    post:
+      tags:
+        - Test Execution
+      summary: Start or re-run test case execution
+      description: Start executing a test case in a test run, or re-run if already executed
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: testCaseId
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Test case execution started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testRunCase:
+                    $ref: '#/components/schemas/TestRunCase'
+        400:
+          $ref: '../common.yaml#/components/responses/BadRequest'
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /test-runs/{runId}/test-cases/{testCaseId}/steps/{stepNumber}:
+    put:
+      tags:
+        - Test Execution
+      summary: Update test step result
+      description: Record the result of a specific test step execution
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: testCaseId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: stepNumber
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, actualResult]
+              properties:
+                status:
+                  type: string
+                  enum: [pass, fail, not_executed]
+                actualResult:
+                  type: string
+                evidenceFileId:
+                  type: string
+                  format: uuid
+      responses:
+        200:
+          description: Step result updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  stepResult:
+                    $ref: '#/components/schemas/TestStepResult'
+                  testRunCase:
+                    $ref: '#/components/schemas/TestRunCase'
+        400:
+          $ref: '../common.yaml#/components/responses/BadRequest'
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /test-runs/{runId}/test-cases/{testCaseId}/steps/{stepNumber}/upload:
+    post:
+      tags:
+        - Test Execution
+      summary: Upload evidence file
+      description: Upload an evidence file for a test step
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: testCaseId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: stepNumber
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Evidence file uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  evidenceFile:
+                    $ref: '#/components/schemas/EvidenceFile'
+        400:
+          $ref: '../common.yaml#/components/responses/BadRequest'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /evidence/{fileId}:
+    get:
+      tags:
+        - Test Execution
+      summary: Download evidence file
+      description: Download a previously uploaded evidence file
+      parameters:
+        - in: path
+          name: fileId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Evidence file content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+  /requirements/{reqId}/test-coverage:
+    get:
+      tags:
+        - Test Coverage
+      summary: Get test coverage for requirement
+      description: Retrieve test cases linked to a requirement and their latest results
+      parameters:
+        - in: path
+          name: reqId
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Test coverage retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  testCases:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TestCase'
+                  latestResults:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        testCase:
+                          $ref: '#/components/schemas/TestCase'
+                        testRun:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                        result:
+                          type: string
+                          enum: [pass, fail, pending]
+                        executedAt:
+                          type: string
+                          format: date-time
+        404:
+          $ref: '../common.yaml#/components/responses/NotFound'
+        401:
+          $ref: '../common.yaml#/components/responses/Unauthorized'
+        500:
+          $ref: '../common.yaml#/components/responses/ServerError'
+
+components:
+  schemas:
+    TestRun:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        status:
+          type: string
+          enum: [not_started, in_progress, complete, approved]
+        overallResult:
+          type: string
+          enum: [pass, fail, pending]
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          format: uuid
+        createdByName:
+          type: string
+        approvedAt:
+          type: string
+          format: date-time
+        approvedBy:
+          type: string
+          format: uuid
+        approvedByName:
+          type: string
+
+    TestCase:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, approved]
+        revision:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          format: uuid
+        createdByName:
+          type: string
+        approvedAt:
+          type: string
+          format: date-time
+        approvedBy:
+          type: string
+          format: uuid
+        approvedByName:
+          type: string
+
+    TestStep:
+      type: object
+      properties:
+        stepNumber:
+          type: integer
+        action:
+          type: string
+        expectedResult:
+          type: string
+
+    TestRunCase:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        testRunId:
+          type: string
+          format: uuid
+        testCaseId:
+          type: string
+        testCaseTitle:
+          type: string
+        testCaseDescription:
+          type: string
+        status:
+          type: string
+          enum: [not_started, in_progress, complete]
+        result:
+          type: string
+          enum: [pass, fail, pending]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        executedBy:
+          type: string
+          format: uuid
+        executedByName:
+          type: string
+
+    TestStepResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        testRunCaseId:
+          type: string
+          format: uuid
+        stepNumber:
+          type: integer
+        expectedResult:
+          type: string
+        actualResult:
+          type: string
+        status:
+          type: string
+          enum: [pass, fail, not_executed]
+        evidenceFileId:
+          type: string
+          format: uuid
+        executedAt:
+          type: string
+          format: date-time
+        executedBy:
+          type: string
+          format: uuid
+        executedByName:
+          type: string
+
+    EvidenceFile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        filePath:
+          type: string
+        fileSize:
+          type: integer
+        mimeType:
+          type: string
+        uploadedBy:
+          type: string
+          format: uuid
+        uploadedByName:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+        checksum:
+          type: string

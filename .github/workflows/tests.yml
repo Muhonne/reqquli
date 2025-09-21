@@ -1,0 +1,279 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: reqquli
+          POSTGRES_PASSWORD: reqquli_test
+          POSTGRES_DB: reqquli_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: reqquli
+      DB_PASSWORD: reqquli_test
+      DB_NAME: reqquli_test
+      JWT_SECRET: test-jwt-secret-key-for-github-actions
+      PORT: 3000
+      VITE_API_URL: http://localhost:3000
+      PLAYWRIGHT_BASE_URL: http://localhost:5173
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Setup database
+        run: |
+          echo "Setting up database schema..."
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f scripts/database-setup.sql
+          echo "Loading seed data..."
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f scripts/seed-data.sql
+          echo "Verifying admin user exists..."
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT email, email_verified FROM users WHERE email='admin@reqquli.com';"
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm run start &
+          echo "Waiting for backend server to start..."
+          npx wait-on http://localhost:3000/api/health -t 60000 --verbose
+
+      - name: Start client dev server
+        run: |
+          npm run client:dev &
+          echo "Waiting for frontend dev server to start..."
+          npx wait-on http://localhost:5173 -t 60000 --verbose
+
+      - name: Verify servers are running
+        run: |
+          curl -f http://localhost:3000/api/health || exit 1
+          curl -f http://localhost:5173 || exit 1
+          echo "Both servers are running successfully"
+
+      - name: Run smoke tests
+        run: npm run test:e2e:smoke
+
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload smoke test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screenshots
+          path: test-results/
+          retention-days: 7
+
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+    needs: smoke-tests
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: reqquli
+          POSTGRES_PASSWORD: reqquli_test
+          POSTGRES_DB: reqquli_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: reqquli
+      DB_PASSWORD: reqquli_test
+      DB_NAME: reqquli_test
+      JWT_SECRET: test-jwt-secret-key-for-github-actions
+      PORT: 3000
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup database
+        run: |
+          echo "Setting up database schema..."
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f scripts/database-setup.sql
+          echo "Loading seed data..."
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f scripts/seed-data.sql
+          echo "Verifying admin user exists..."
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT email, email_verified FROM users WHERE email='admin@reqquli.com';"
+
+      - name: Build TypeScript
+        run: npm run server:build
+
+      - name: Start server in background
+        run: |
+          npm run start &
+          echo "Waiting for server to start..."
+          npx wait-on http://localhost:3000/api/health -t 60000 --verbose
+
+      - name: Verify server is running
+        run: |
+          curl -f http://localhost:3000/api/health || exit 1
+          echo "Server is running successfully"
+
+      - name: Run API tests
+        run: npm run test:api
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: coverage/
+          retention-days: 7
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: smoke-tests
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: reqquli
+          POSTGRES_PASSWORD: reqquli_test
+          POSTGRES_DB: reqquli_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: reqquli
+      DB_PASSWORD: reqquli_test
+      DB_NAME: reqquli_test
+      JWT_SECRET: test-jwt-secret-key-for-github-actions
+      PORT: 3000
+      VITE_API_URL: http://localhost:3000
+      PLAYWRIGHT_BASE_URL: http://localhost:5173
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Setup database
+        run: |
+          echo "Setting up database schema..."
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f scripts/database-setup.sql
+          echo "Loading seed data..."
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f scripts/seed-data.sql
+          echo "Verifying admin user exists..."
+          PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT email, email_verified FROM users WHERE email='admin@reqquli.com';"
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm run start &
+          echo "Waiting for backend server to start..."
+          npx wait-on http://localhost:3000/api/health -t 60000 --verbose
+
+      - name: Start client dev server
+        run: |
+          npm run client:dev &
+          echo "Waiting for frontend dev server to start..."
+          npx wait-on http://localhost:5173 -t 60000 --verbose
+
+      - name: Verify servers are running
+        run: |
+          curl -f http://localhost:3000/api/health || exit 1
+          curl -f http://localhost:5173 || exit 1
+          echo "Both servers are running successfully"
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: test-results/
+          retention-days: 7

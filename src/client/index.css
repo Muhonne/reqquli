@@ -1,0 +1,19 @@
+@import './styles/design-system.css';
+@import "tailwindcss";
+
+/* Custom styles */
+@layer base {
+  * {
+    border-color: oklch(0.7 0 0 / 0.1);
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

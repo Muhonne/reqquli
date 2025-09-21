@@ -1,0 +1,301 @@
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user account
+      description: |
+        Register a new user with email, password, and full name. 
+        Sends verification email upon successful registration.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Invalid input or user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login with email and password
+      description: Authenticate user and return JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                    description: JWT authentication token
+        '401':
+          description: Invalid credentials or unverified email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh JWT token
+      description: Generate a new JWT token using existing valid token
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: New JWT authentication token
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Invalidate current JWT token by adding it to blacklist
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/verify-email/{token}:
+    get:
+      tags:
+        - Authentication
+      summary: Verify email address
+      description: Verify user email address using verification token
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyEmailResponse'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyEmailResponse'
+
+  /auth/resend-verification:
+    post:
+      tags:
+        - Authentication
+      summary: Resend verification email
+      description: Resend email verification link to user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequest'
+      responses:
+        '200':
+          description: Verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResendVerificationResponse'
+
+  /auth/approvers:
+    get:
+      tags:
+        - Authentication
+      summary: Get list of approvers
+      description: Retrieve all verified users who can act as approvers
+      security: []
+      responses:
+        '200':
+          description: List of approvers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Approver'
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - email
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - fullName
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          description: |
+            Password must contain:
+            - At least 8 characters
+            - One lowercase letter
+            - One uppercase letter  
+            - One number
+        fullName:
+          type: string
+          minLength: 2
+
+    RegisterResponse:
+      type: object
+      required:
+        - user
+        - message
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            fullName:
+              type: string
+        message:
+          type: string
+
+    VerifyEmailResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        user:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            fullName:
+              type: string
+
+    ResendVerificationRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResendVerificationResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    Approver:
+      type: object
+      required:
+        - id
+        - displayName
+        - email
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email

@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/client/*"],
+      "@/components/*": ["./src/client/components/*"],
+      "@/atoms/*": ["./src/client/components/atoms/*"],
+      "@/molecules/*": ["./src/client/components/molecules/*"],
+      "@/organisms/*": ["./src/client/components/organisms/*"],
+      "@/templates/*": ["./src/client/components/templates/*"],
+      "@/pages/*": ["./src/client/components/pages/*"],
+      "@/stores/*": ["./src/client/stores/*"],
+      "@/types/*": ["src/types/*"],
+      "@/lib/*": ["./src/client/lib/*"]
+    }
+  },
+  "include": ["src/client", "src/shared", "src/types"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

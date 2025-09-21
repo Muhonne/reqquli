@@ -1,0 +1,404 @@
+paths:
+  /user-requirements:
+    get:
+      tags:
+        - User requirements
+      summary: Get all user requirements
+      description: Retrieve all user requirements with filtering, sorting, and pagination
+      parameters:
+        - name: status
+          in: query
+          description: Filter by requirement status
+          schema:
+            type: string
+            enum: [draft, approved]
+        - name: sort
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [id, title, created_at]
+            default: id
+        - name: order
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: List of user requirements with pagination info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Userrequirement'
+                  meta:
+                    type: object
+                    properties:
+                      pagination:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          page:
+                            type: integer
+                          pages:
+                            type: integer
+                          limit:
+                            type: integer
+
+    post:
+      tags:
+        - User requirements
+      summary: Create a new user requirement
+      description: Create a new user requirement with title and description
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                  description: requirement title (must be unique)
+                description:
+                  type: string
+                  minLength: 1
+                  description: Detailed requirement description
+      responses:
+        '201':
+          description: User requirement created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  requirement:
+                    $ref: '#/components/schemas/Userrequirement'
+        '400':
+          description: Invalid input data or validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /user-requirements/{id}:
+    get:
+      tags:
+        - User requirements
+      summary: Get user requirement by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User requirement details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  requirement:
+                    $ref: '#/components/schemas/Userrequirement'
+        '404':
+          description: User requirement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - User requirements
+      summary: Update user requirement
+      description: Partially update user requirement title and/or description
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                  description: Updated requirement title
+                description:
+                  type: string
+                  minLength: 1
+                  description: Updated requirement description
+      responses:
+        '200':
+          description: User requirement updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  requirement:
+                    $ref: '#/components/schemas/Userrequirement'
+        '400':
+          description: Invalid input data or cannot modify approved requirement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User requirement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - User requirements
+      summary: Delete user requirement
+      description: Soft delete a user requirement (marks as deleted)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User requirement marked as deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '404':
+          description: User requirement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /user-requirements/{id}/approve:
+    post:
+      tags:
+        - User requirements
+      summary: Approve user requirement
+      description: Approve a user requirement with approval notes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approvalNotes:
+                  type: string
+                  description: Optional notes explaining the approval decision
+      responses:
+        '200':
+          description: requirement approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  requirement:
+                    $ref: '#/components/schemas/Userrequirement'
+        '400':
+          description: Invalid request or requirement already approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User requirement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /user-requirements/{id}/downstream-traces:
+    get:
+      summary: Get downstream traces for user requirement
+      description: Retrieve all system requirements that trace from this user requirement
+      tags:
+        - User requirements
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User requirement ID
+          schema:
+            type: string
+            pattern: '^UR-\d+$'
+      responses:
+        '200':
+          description: Downstream traces retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  systemrequirements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Systemrequirement'
+        '401':
+          description: Unauthorized
+        '404':
+          description: User requirement not found
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    Userrequirement:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - status
+        - revision
+        - createdAt
+        - createdBy
+      properties:
+        id:
+          type: string
+          example: "UR-1"
+          description: Sequential user requirement ID
+        title:
+          type: string
+          maxLength: 200
+          description: requirement title
+        description:
+          type: string
+          description: Detailed requirement description
+        status:
+          type: string
+          enum: [draft, approved]
+          description: Current requirement status
+        revision:
+          type: integer
+          minimum: 0
+          description: Revision number (increments on approval)
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        createdBy:
+          type: string
+          description: ID of user who created the requirement
+        lastModified:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last modification timestamp
+        modifiedBy:
+          type: string
+          nullable: true
+          description: ID of user who last modified the requirement
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Approval timestamp
+        approvedBy:
+          type: string
+          nullable: true
+          description: ID of user who approved the requirement
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Soft deletion timestamp
+        upstreamTraces:
+          type: array
+          nullable: true
+          description: requirements that trace TO this requirement
+          items:
+            $ref: '../traces.yaml#/components/schemas/requirementTrace'
+        downstreamTraces:
+          type: array
+          nullable: true
+          description: requirements that trace FROM this requirement
+          items:
+            $ref: '../traces.yaml#/components/schemas/requirementTrace'
+        approvalNotes:
+          type: string
+          nullable: true
+          description: Notes from approval process
+        createdByName:
+          type: string
+          nullable: true
+          description: Name of user who created the requirement
+        modifiedByName:
+          type: string
+          nullable: true
+          description: Name of user who last modified the requirement
+        approvedByName:
+          type: string
+          nullable: true
+          description: Name of user who approved the requirement

@@ -1,0 +1,503 @@
+paths:
+  /system-requirements:
+    get:
+      tags:
+        - System requirements
+      summary: Get all system requirements
+      description: Retrieve all system requirements with filtering, sorting, and pagination
+      parameters:
+        - name: status
+          in: query
+          description: Filter by requirement status
+          schema:
+            type: string
+            enum: [draft, approved]
+        - name: sort
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [lastModified, createdAt, approvedAt, id, title]
+            default: lastModified
+        - name: order
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 100
+        - name: search
+          in: query
+          description: Search text in title and description
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of system requirements with pagination info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Systemrequirement'
+                  meta:
+                    type: object
+                    properties:
+                      pagination:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          page:
+                            type: integer
+                          pages:
+                            type: integer
+                          limit:
+                            type: integer
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - System requirements
+      summary: Create a new system requirement
+      description: Create a new system requirement with title and description
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                  description: requirement title (must be unique)
+                description:
+                  type: string
+                  minLength: 1
+                  description: Detailed requirement description
+                status:
+                  type: string
+                  enum: [approved]
+                  description: Optional - create as approved (requires password)
+                password:
+                  type: string
+                  description: required if creating as approved
+                approvalNotes:
+                  type: string
+                  description: Optional notes when creating as approved
+      responses:
+        '201':
+          description: System requirement created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  requirement:
+                    $ref: '#/components/schemas/Systemrequirement'
+        '400':
+          description: Invalid input data or validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system-requirements/trace-from/{userrequirementId}:
+    get:
+      tags:
+        - System requirements
+      summary: Get system requirements tracing from a user requirement
+      parameters:
+        - name: userrequirementId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User requirement ID to find traces from
+      responses:
+        '200':
+          description: List of system requirements tracing from the user requirement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Systemrequirement'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system-requirements/{id}:
+    get:
+      tags:
+        - System requirements
+      summary: Get system requirement by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: System requirement ID (e.g., SR-1)
+      responses:
+        '200':
+          description: System requirement details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  requirement:
+                    $ref: '#/components/schemas/Systemrequirement'
+        '404':
+          description: System requirement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - System requirements
+      summary: Update system requirement
+      description: Partially update system requirement fields. Editing approved requirements reverts them to draft status.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: System requirement ID (e.g., SR-1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                  description: Updated requirement title
+                description:
+                  type: string
+                  minLength: 1
+                  description: Updated requirement description
+                status:
+                  type: string
+                  enum: [approved]
+                  description: Change status to approved (requires password)
+                password:
+                  type: string
+                  description: required for editing approved requirements or approving
+                approvalNotes:
+                  type: string
+                  description: Optional notes when approving via PATCH
+      responses:
+        '200':
+          description: System requirement updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  requirement:
+                    $ref: '#/components/schemas/Systemrequirement'
+        '400':
+          description: Invalid input data or validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required or invalid password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: System requirement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - System requirements
+      summary: Delete system requirement
+      description: Soft delete a system requirement (sets deletedAt timestamp)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: System requirement ID (e.g., SR-1)
+      responses:
+        '200':
+          description: System requirement marked as deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '404':
+          description: System requirement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /system-requirements/{id}/approve:
+    post:
+      tags:
+        - System requirements
+      summary: Approve system requirement
+      description: Approve a system requirement with password confirmation and optional approval notes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: System requirement ID (e.g., SR-1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  type: string
+                  description: User password for approval confirmation
+                approvalNotes:
+                  type: string
+                  description: Optional notes explaining the approval decision
+      responses:
+        '200':
+          description: requirement approved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  requirement:
+                    $ref: '#/components/schemas/Systemrequirement'
+        '400':
+          description: Invalid request, requirement already approved, or incorrect password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: System requirement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+components:
+  schemas:
+    Systemrequirement:
+      type: object
+      required:
+        - id
+        - revision
+        - title
+        - description
+        - status
+        - createdAt
+        - createdBy
+      properties:
+        id:
+          type: string
+          example: "SR-1"
+          description: Unique system requirement identifier
+        revision:
+          type: integer
+          minimum: 0
+          description: Revision number (increments only on approval)
+        title:
+          type: string
+          maxLength: 200
+          description: requirement title
+        description:
+          type: string
+          description: Detailed requirement description
+        status:
+          type: string
+          enum: [draft, approved]
+          description: Current requirement status
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        createdBy:
+          type: string
+          description: ID of user who created the requirement
+        createdByName:
+          type: string
+          nullable: true
+          description: Name of user who created the requirement
+        lastModified:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last modification timestamp
+        modifiedBy:
+          type: string
+          nullable: true
+          description: ID of user who last modified the requirement
+        modifiedByName:
+          type: string
+          nullable: true
+          description: Name of user who last modified the requirement
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Approval timestamp
+        approvedBy:
+          type: string
+          nullable: true
+          description: ID of user who approved the requirement
+        approvedByName:
+          type: string
+          nullable: true
+          description: Name of user who approved the requirement
+        approvalNotes:
+          type: string
+          nullable: true
+          description: Notes from approval process
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Soft deletion timestamp
+        upstreamTraces:
+          type: array
+          items:
+            $ref: '../traces.yaml#/components/schemas/requirementTrace'
+          description: requirements that trace TO this requirement
+        downstreamTraces:
+          type: array
+          items:
+            $ref: '../traces.yaml#/components/schemas/requirementTrace'
+          description: requirements that trace FROM this requirement
+
+    SystemrequirementListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Systemrequirement'
+        meta:
+          type: object
+          properties:
+            pagination:
+              type: object
+              properties:
+                total:
+                  type: integer
+                  description: Total number of requirements
+                page:
+                  type: integer
+                  description: Current page number
+                pages:
+                  type: integer
+                  description: Total number of pages
+                limit:
+                  type: integer
+                  description: Number of items per page
+
+    SystemrequirementResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        requirement:
+          $ref: '#/components/schemas/Systemrequirement'
+
+    ErrorResponse:
+      $ref: '../common.yaml#/components/schemas/ErrorResponse'

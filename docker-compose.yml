@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: reqquli-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-reqquli}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-reqquli_dev}
+      POSTGRES_DB: ${DB_NAME:-azure_reqquli}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/database-setup.sql:/docker-entrypoint-initdb.d/01-setup.sql
+      - ./scripts/seed-data.sql:/docker-entrypoint-initdb.d/02-seed-data.sql
+      #- ./scripts/system-seed-data.sql:/docker-entrypoint-initdb.d/02-seed-data.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-reqquli} -d ${DB_NAME:-azure_reqquli}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
