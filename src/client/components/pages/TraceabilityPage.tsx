@@ -452,14 +452,14 @@ export function TraceabilityPage() {
 
   return (
     <AppLayout>
-      <div className="p-4">
+      <div className="flex flex-col h-full p-4">
         <h1 className="text-2xl font-bold mb-4">Requirements Traceability</h1>
         {traces.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center flex-1">
             <Text color="muted">No traces found</Text>
           </div>
         ) : (
-          <div className="overflow-auto h-full" tabIndex={0} aria-label="Traceability diagram">
+          <div className="overflow-auto flex-1" tabIndex={0} aria-label="Traceability diagram">
             <svg ref={svgRef} role="img" aria-label="Requirements traceability visualization"></svg>
           </div>
         )}
