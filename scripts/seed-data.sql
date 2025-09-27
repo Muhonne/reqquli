@@ -606,8 +606,8 @@ INSERT INTO testing.test_cases (id, title, description, status, revision, create
 
     ('TC-8', 'Data Export to Multiple Formats',
      'Verify that requirements can be exported to CSV, PDF, and JSON formats',
-     'draft', 0, NOW() - INTERVAL '10 days', '22222222-2222-2222-2222-222222222222',
-     NOW() - INTERVAL '10 days', '22222222-2222-2222-2222-222222222222',
+     'draft', 0, NOW() - INTERVAL '10 days', '11111111-1111-1111-1111-111111111111',
+     NOW() - INTERVAL '10 days', '11111111-1111-1111-1111-111111111111',
      NULL, NULL);
 
 -- Insert test steps
@@ -700,7 +700,7 @@ INSERT INTO testing.test_runs (id, name, description, status, overall_result, cr
 
     ('TR-2', 'Sprint 3 Regression Test',
      'Regression testing for Sprint 3 features',
-     'complete', 'fail', NOW() - INTERVAL '7 days', '22222222-2222-2222-2222-222222222222',
+     'complete', 'fail', NOW() - INTERVAL '7 days', '11111111-1111-1111-1111-111111111111',
      NULL, NULL),
 
     ('TR-3', 'Current Sprint Test',
@@ -715,7 +715,7 @@ INSERT INTO testing.test_runs (id, name, description, status, overall_result, cr
 
     ('TR-5', 'Integration Test - In Progress',
      'Integration testing between modules - partially complete',
-     'in_progress', 'pending', NOW() - INTERVAL '1 day', '22222222-2222-2222-2222-222222222222',
+     'in_progress', 'pending', NOW() - INTERVAL '1 day', '11111111-1111-1111-1111-111111111111',
      NULL, NULL),
 
     ('TR-6', 'Smoke Test - Not Started',
@@ -731,17 +731,17 @@ INSERT INTO testing.test_run_cases (test_run_id, test_case_id, status, result, s
     ('TR-1', 'TC-2', 'complete', 'pass',
      NOW() - INTERVAL '14 days' + INTERVAL '1 hour', NOW() - INTERVAL '14 days' + INTERVAL '90 minutes', '11111111-1111-1111-1111-111111111111'),
     ('TR-1', 'TC-3', 'complete', 'pass',
-     NOW() - INTERVAL '14 days' + INTERVAL '2 hours', NOW() - INTERVAL '14 days' + INTERVAL '3 hours', '22222222-2222-2222-2222-222222222222'),
+     NOW() - INTERVAL '14 days' + INTERVAL '2 hours', NOW() - INTERVAL '14 days' + INTERVAL '3 hours', '11111111-1111-1111-1111-111111111111'),
     ('TR-1', 'TC-4', 'complete', 'pass',
      NOW() - INTERVAL '13 days', NOW() - INTERVAL '13 days' + INTERVAL '45 minutes', '11111111-1111-1111-1111-111111111111'),
 
     -- Sprint 3 Regression Test (one failure)
     ('TR-2', 'TC-1', 'complete', 'pass',
-     NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days' + INTERVAL '20 minutes', '22222222-2222-2222-2222-222222222222'),
+     NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days' + INTERVAL '20 minutes', '11111111-1111-1111-1111-111111111111'),
     ('TR-2', 'TC-2', 'complete', 'pass',
-     NOW() - INTERVAL '7 days' + INTERVAL '30 minutes', NOW() - INTERVAL '7 days' + INTERVAL '45 minutes', '22222222-2222-2222-2222-222222222222'),
+     NOW() - INTERVAL '7 days' + INTERVAL '30 minutes', NOW() - INTERVAL '7 days' + INTERVAL '45 minutes', '11111111-1111-1111-1111-111111111111'),
     ('TR-2', 'TC-5', 'complete', 'fail',
-     NOW() - INTERVAL '7 days' + INTERVAL '1 hour', NOW() - INTERVAL '7 days' + INTERVAL '90 minutes', '22222222-2222-2222-2222-222222222222'),
+     NOW() - INTERVAL '7 days' + INTERVAL '1 hour', NOW() - INTERVAL '7 days' + INTERVAL '90 minutes', '11111111-1111-1111-1111-111111111111'),
     ('TR-2', 'TC-7', 'complete', 'pass',
      NOW() - INTERVAL '7 days' + INTERVAL '2 hours', NOW() - INTERVAL '7 days' + INTERVAL '150 minutes', '11111111-1111-1111-1111-111111111111'),
 
@@ -751,7 +751,7 @@ INSERT INTO testing.test_run_cases (test_run_id, test_case_id, status, result, s
     ('TR-3', 'TC-2', 'complete', 'pass',
      NOW() - INTERVAL '2 days' + INTERVAL '20 minutes', NOW() - INTERVAL '2 days' + INTERVAL '35 minutes', '11111111-1111-1111-1111-111111111111'),
     ('TR-3', 'TC-3', 'in_progress', 'pending',
-     NOW() - INTERVAL '1 day', NULL, '22222222-2222-2222-2222-222222222222'),
+     NOW() - INTERVAL '1 day', NULL, '11111111-1111-1111-1111-111111111111'),
     ('TR-3', 'TC-4', 'not_started', 'pending',
      NULL, NULL, NULL),
 
@@ -763,17 +763,17 @@ INSERT INTO testing.test_run_cases (test_run_id, test_case_id, status, result, s
     ('TR-4', 'TC-3', 'complete', 'pass',
      NOW() - INTERVAL '3 hours' + INTERVAL '40 minutes', NOW() - INTERVAL '3 hours' + INTERVAL '60 minutes', '11111111-1111-1111-1111-111111111111'),
     ('TR-4', 'TC-4', 'complete', 'pass',
-     NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours' + INTERVAL '25 minutes', '22222222-2222-2222-2222-222222222222'),
+     NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours' + INTERVAL '25 minutes', '11111111-1111-1111-1111-111111111111'),
     ('TR-4', 'TC-6', 'complete', 'pass',
      NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 hour' + INTERVAL '30 minutes', '11111111-1111-1111-1111-111111111111'),
 
     -- Integration Test - In Progress (some complete, some in progress, some not started)
     ('TR-5', 'TC-1', 'complete', 'pass',
-     NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day' + INTERVAL '20 minutes', '22222222-2222-2222-2222-222222222222'),
+     NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day' + INTERVAL '20 minutes', '11111111-1111-1111-1111-111111111111'),
     ('TR-5', 'TC-2', 'complete', 'pass',
-     NOW() - INTERVAL '1 day' + INTERVAL '30 minutes', NOW() - INTERVAL '1 day' + INTERVAL '45 minutes', '22222222-2222-2222-2222-222222222222'),
+     NOW() - INTERVAL '1 day' + INTERVAL '30 minutes', NOW() - INTERVAL '1 day' + INTERVAL '45 minutes', '11111111-1111-1111-1111-111111111111'),
     ('TR-5', 'TC-5', 'in_progress', 'pending',
-     NOW() - INTERVAL '6 hours', NULL, '22222222-2222-2222-2222-222222222222'),
+     NOW() - INTERVAL '6 hours', NULL, '11111111-1111-1111-1111-111111111111'),
     ('TR-5', 'TC-7', 'not_started', 'pending',
      NULL, NULL, NULL),
     ('TR-5', 'TC-8', 'not_started', 'pending',
