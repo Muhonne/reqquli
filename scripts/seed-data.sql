@@ -9,8 +9,7 @@ DELETE FROM users;
 
 -- Insert development admin user with proper UUID
 INSERT INTO users (id, email, password_hash, full_name, email_verified, created_at) VALUES
-    ('11111111-1111-1111-1111-111111111111', 'admin@reqquli.com', '$2b$10$wfdJ6H6GSR41wtAVsqLlae7O9kkIOUKFqCX4EnAreyjV0EfHcAPn2', 'Admin User', true, NOW() - INTERVAL '30 days'),
-    ('22222222-2222-2222-2222-222222222222', 'test@example.com', '$2b$10$1S/C9cRWX92df9Ga3khUZei2/KAio3dFfeKie03moSjPutTpv6keq', 'Test User', true, NOW() - INTERVAL '20 days');
+    ('11111111-1111-1111-1111-111111111111', 'admin@reqquli.com', '$2b$10$0cpfTHC75c/L89Sx7XCTf.TYuwJXNaWG7gqFueMcrB6uGFvpobKoq', 'Admin User', true, NOW() - INTERVAL '30 days');
 
 -- Insert 50 user requirements
 -- Mix of draft and approved, with varied lastModified dates for proper ordering

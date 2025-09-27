@@ -579,8 +579,8 @@ GROUP BY DATE(occurred_at)
 ORDER BY date DESC;
 
 -- Grant appropriate permissions
-GRANT SELECT ON audit_events TO reqquli;
-GRANT SELECT ON audit_trail TO reqquli;
-GRANT SELECT ON user_activity TO reqquli;
-GRANT SELECT ON system_metrics TO reqquli;
-GRANT EXECUTE ON FUNCTION log_audit_event TO reqquli;
+GRANT SELECT ON audit_events TO reqquli_db_user;
+GRANT SELECT ON audit_trail TO reqquli_db_user;
+GRANT SELECT ON user_activity TO reqquli_db_user;
+GRANT SELECT ON system_metrics TO reqquli_db_user;
+GRANT EXECUTE ON FUNCTION log_audit_event TO reqquli_db_user;
