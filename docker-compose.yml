@@ -11,9 +11,8 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/database-setup.sql:/docker-entrypoint-initdb.d/01-setup.sql
-      - ./scripts/seed-data.sql:/docker-entrypoint-initdb.d/02-seed-data.sql
-      #- ./scripts/system-seed-data.sql:/docker-entrypoint-initdb.d/02-seed-data.sql
+      # Database initialization now handled by the application on first startup
+      # See src/server/config/dbInit.ts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-reqquli} -d ${DB_NAME:-azure_reqquli}"]
       interval: 10s

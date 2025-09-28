@@ -12,6 +12,7 @@ import { initializeAuditRoutes } from './routes/audit';
 import { initializeTestCaseRoutes } from './routes/testCases';
 import { authenticateToken } from './middleware/auth';
 import { testConnection, closePool } from './config/database';
+import { initializeDatabase } from './config/dbInit';
 import logger from './config/logger';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler';
 
@@ -91,6 +92,9 @@ async function startServer() {
     if (!connected) {
       console.error('⚠️  Warning: Database connection failed. Server will start but database operations will not work.');
       console.log('💡 To start the database, run: docker-compose up -d');
+    } else {
+      // Initialize database if needed (only runs if schema doesn't exist)
+      await initializeDatabase(pool);
     }
     const server = app.listen(PORT, () => {
       logger.info('Server started successfully', {

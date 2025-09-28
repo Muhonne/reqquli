@@ -56,6 +56,9 @@ az postgres flexible-server db create \
   --server-name $DB_SERVER \
   --database-name $DB_NAME
 
+# Note: Database schema and seed data will be automatically initialized
+# on first application startup (see Database Initialization section below)
+
 # Configure firewall rule for Azure services and development
 az postgres flexible-server firewall-rule create \
   --resource-group $RESOURCE_GROUP \
@@ -207,11 +210,12 @@ rm -f deploy.zip
 npm install
 npm run build
 
-# Create deployment package
+# Create deployment package (include scripts for auto-initialization)
 zip -r deploy.zip \
   dist \
   node_modules \
   package*.json \
+  scripts/*.sql \
   .env.example
 
 # Deploy to Azure
@@ -305,22 +309,48 @@ jobs:
           package: deploy.zip
 ```
 
-## Database Migration
+## Database Initialization
+
+### Automatic Initialization (Recommended)
+
+The application now includes automatic database initialization. On first startup:
+1. Checks if database schema exists
+2. If missing, automatically runs:
+   - `scripts/database-setup.sql` - Creates all tables, indexes, and triggers
+   - `scripts/seed-data.sql` - Loads demo data including admin user
+3. Verifies initialization succeeded
+
+This happens automatically when the application starts, no manual steps required.
+
+### Manual Initialization (Optional)
+
+If you prefer to initialize manually or need to reset the database:
 
 ```bash
-# Connect to database for initial setup
-az postgres flexible-server connect \
-  --name $DB_SERVER \
-  --admin-user $DB_USER \
-  --admin-password $DB_PASSWORD \
-  --database-name $DB_NAME
+# Connect to database and run scripts manually
+psql -h $DB_SERVER.postgres.database.azure.com \
+  -U $DB_USER \
+  -d $DB_NAME \
+  -f scripts/database-setup.sql
 
-# The application will auto-initialize tables on first run
-# Check logs to verify database initialization
+psql -h $DB_SERVER.postgres.database.azure.com \
+  -U $DB_USER \
+  -d $DB_NAME \
+  -f scripts/seed-data.sql
+```
+
+### Verify Initialization
+
+```bash
+# Check application logs for initialization status
 az webapp log tail \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
   --filter "Database"
+
+# Look for messages like:
+# "✅ Database schema already exists" (if previously initialized)
+# "🎉 Database initialization completed successfully!" (if newly initialized)
 ```
 
 ## SSL/TLS Configuration
@@ -508,8 +538,10 @@ az group delete \
 
 ## Notes
 
-- Database tables are auto-initialized on first application start
+- Database schema and demo data are auto-initialized on first application start
+- Default admin credentials after initialization: `admin@reqquli.com` / `reqquli_admin`
 - SSL/TLS is required for Azure PostgreSQL connections
 - Application logs are stored in `/home/LogFiles/` on the App Service
 - Default timeout for App Service is 230 seconds
 - WebSockets support is enabled for real-time features
+- Scripts folder must be included in deployment package for auto-initialization to work
