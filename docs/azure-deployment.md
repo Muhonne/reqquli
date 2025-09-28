@@ -3,7 +3,7 @@
 ## Prerequisites
 - Azure subscription
 - Azure CLI installed (`az --version`)
-- Node.js 20+ installed locally
+- Node.js 22+ installed locally
 - Git repository configured
 
 ## Development Setup (Free/Low Cost)
@@ -36,7 +36,7 @@ az webapp create \
   --resource-group $RESOURCE_GROUP \
   --plan $PLAN \
   --name $APP_NAME \
-  --runtime "NODE:20-lts"
+  --runtime "NODE:22-lts"
 
 # Create PostgreSQL Flexible Server (Burstable B1ms - cheapest option ~$15/month)
 az postgres flexible-server create \
@@ -124,7 +124,7 @@ az webapp create \
   --resource-group $RESOURCE_GROUP \
   --plan $PLAN \
   --name $APP_NAME \
-  --runtime "NODE:20-lts"
+  --runtime "NODE:22-lts"
 
 # Create PostgreSQL Flexible Server (General Purpose - ~$50/month)
 az postgres flexible-server create \
@@ -165,7 +165,7 @@ az webapp config appsettings set \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
   --settings \
-    NODE_ENV=development \
+    NODE_ENV=production \
     PORT=8080 \
     JWT_SECRET="$JWT_SECRET" \
     DB_HOST="$DB_SERVER.postgres.database.azure.com" \
@@ -193,7 +193,7 @@ az webapp config set \
 az webapp config appsettings set \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
-  --settings WEBSITE_NODE_DEFAULT_VERSION="~20"
+  --settings WEBSITE_NODE_DEFAULT_VERSION="~22"
 ```
 
 ### 3. Build and Deploy
@@ -284,7 +284,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
