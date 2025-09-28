@@ -116,80 +116,88 @@ export function TraceabilityPage() {
       let currentY = marginTop;
       let maxY = marginTop;
 
-      // First pass: position user requirements
-      userNodes.forEach((node) => {
-        const key = `${node.type}:${node.id}`;
-        positions[key] = currentY + nodeHeight / 2;
-        currentY += nodeHeight + nodeGap;
-        maxY = Math.max(maxY, positions[key] + nodeHeight / 2);
-      });
+      // First pass: sort and position system requirements grouped by their UR traces
+      const srByUR = new Map<string, typeof systemNodes>();
+      const unconnectedSRs: typeof systemNodes = [];
 
-      // Second pass: position system requirements aligned with their connected user requirements
-      const positionedSR = new Set<string>();
-      let srBottomY = currentY;  // Track the bottom position for unconnected SRs
-      const srPositions: number[] = []; // Track all SR positions to avoid overlaps
-
-      userNodes.forEach(urNode => {
-        const urKey = `${urNode.type}:${urNode.id}`;
-        const urY = positions[urKey];
-
-        // Find all system requirements connected to this user requirement
-        const connectedSRs = systemNodes.filter(srNode => {
-          const srKey = `${srNode.type}:${srNode.id}`;
-          return !positionedSR.has(srKey) && processedData.edges.some(e =>
+      // Group SRs by their connected URs
+      systemNodes.forEach(srNode => {
+        const connectedUR = userNodes.find(urNode => {
+          return processedData.edges.some(e =>
             (e.fromId === urNode.id && e.fromType === 'user' &&
              e.toId === srNode.id && e.toType === 'system')
           );
         });
 
-        if (connectedSRs.length > 0) {
-          // Start positioning from the UR's Y position
-          let localY = urY - (connectedSRs.length - 1) * (nodeHeight + nodeGap) / 2;
-
-          connectedSRs.forEach(srNode => {
-            const srKey = `${srNode.type}:${srNode.id}`;
-
-            // Check for overlaps with already positioned SRs
-            let finalY = localY;
-            let attempts = 0;
-            while (attempts < 50) { // Prevent infinite loops
-              let hasOverlap = false;
-              for (const existingY of srPositions) {
-                if (Math.abs(finalY - existingY) < nodeHeight + nodeGap - 1) {
-                  hasOverlap = true;
-                  break;
-                }
-              }
-              if (!hasOverlap) {
-                break;
-              }
-              finalY += nodeHeight + nodeGap;
-              attempts++;
-            }
-
-            positions[srKey] = Math.max(finalY, marginTop + nodeHeight / 2);
-            positionedSR.add(srKey);
-            srPositions.push(positions[srKey]);
-            localY += nodeHeight + nodeGap;
-            maxY = Math.max(maxY, positions[srKey] + nodeHeight / 2);
-            srBottomY = Math.max(srBottomY, positions[srKey] + nodeHeight / 2 + nodeGap);
-          });
+        if (connectedUR) {
+          const urKey = `${connectedUR.type}:${connectedUR.id}`;
+          if (!srByUR.has(urKey)) {
+            srByUR.set(urKey, []);
+          }
+          srByUR.get(urKey)!.push(srNode);
+        } else {
+          unconnectedSRs.push(srNode);
         }
       });
 
-      // Position remaining system requirements below the connected ones
-      systemNodes.forEach(srNode => {
-        const srKey = `${srNode.type}:${srNode.id}`;
-        if (!positionedSR.has(srKey)) {
-          positions[srKey] = srBottomY + nodeHeight / 2;
-          srBottomY += nodeHeight + nodeGap;
+      // Position SRs grouped by UR
+      userNodes.forEach(urNode => {
+        const urKey = `${urNode.type}:${urNode.id}`;
+        const connectedSRs = srByUR.get(urKey) || [];
+
+        connectedSRs.forEach(srNode => {
+          const srKey = `${srNode.type}:${srNode.id}`;
+          positions[srKey] = currentY + nodeHeight / 2;
+          currentY += nodeHeight + nodeGap;
           maxY = Math.max(maxY, positions[srKey] + nodeHeight / 2);
+        });
+      });
+
+      // Position unconnected SRs at the end
+      unconnectedSRs.forEach(srNode => {
+        const srKey = `${srNode.type}:${srNode.id}`;
+        positions[srKey] = currentY + nodeHeight / 2;
+        currentY += nodeHeight + nodeGap;
+        maxY = Math.max(maxY, positions[srKey] + nodeHeight / 2);
+      });
+
+      // Second pass: position user requirements aligned with their first connected system requirement
+      const positionedUR = new Set<string>();
+      let urBottomY = currentY;  // Track the bottom position for unconnected URs
+
+      userNodes.forEach(urNode => {
+        const urKey = `${urNode.type}:${urNode.id}`;
+
+        // Find the first system requirement this UR connects to
+        const firstConnectedSR = systemNodes.find(srNode => {
+          return processedData.edges.some(e =>
+            (e.fromId === urNode.id && e.fromType === 'user' &&
+             e.toId === srNode.id && e.toType === 'system')
+          );
+        });
+
+        if (firstConnectedSR) {
+          // Position UR at the same Y as its first connected SR
+          const srKey = `${firstConnectedSR.type}:${firstConnectedSR.id}`;
+          positions[urKey] = positions[srKey];
+          positionedUR.add(urKey);
+          maxY = Math.max(maxY, positions[urKey] + nodeHeight / 2);
+        }
+      });
+
+      // Position remaining user requirements (those without SR connections) below
+      userNodes.forEach(urNode => {
+        const urKey = `${urNode.type}:${urNode.id}`;
+        if (!positionedUR.has(urKey)) {
+          positions[urKey] = urBottomY + nodeHeight / 2;
+          urBottomY += nodeHeight + nodeGap;
+          maxY = Math.max(maxY, positions[urKey] + nodeHeight / 2);
         }
       });
 
       // Third pass: position test cases aligned with their connected system requirements
       const positionedTC = new Set<string>();
-      let tcBottomY = Math.max(srBottomY, currentY);  // Start below all other nodes
+      let tcBottomY = Math.max(urBottomY, currentY);  // Start below all other nodes
       const tcPositions: number[] = []; // Track all TC positions to avoid overlaps
 
       systemNodes.forEach(srNode => {
