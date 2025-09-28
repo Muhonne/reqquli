@@ -9,10 +9,13 @@
 export const getJWTSecret = (): string => {
   const secret = process.env.JWT_SECRET;
 
+  console.log('JWT_SECRET check - exists:', !!secret, 'length:', secret?.length);
+
   if (!secret || secret.length < 32) {
     console.error('FATAL: JWT_SECRET must be configured and at least 32 characters');
     console.error('Please set JWT_SECRET environment variable with a secure value');
     console.error('Generate one with: openssl rand -base64 32');
+    console.error('Current value exists:', !!secret, 'Current length:', secret?.length);
     process.exit(1);
   }
 

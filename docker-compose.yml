@@ -4,9 +4,9 @@ services:
     container_name: reqquli-db
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER:-reqquli}
+      POSTGRES_USER: ${DB_USER:-reqquli_admin}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-reqquli_dev}
-      POSTGRES_DB: ${DB_NAME:-azure_reqquli}
+      POSTGRES_DB: ${DB_NAME:-reqquli_db}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
@@ -14,7 +14,7 @@ services:
       # Database initialization now handled by the application on first startup
       # See src/server/config/dbInit.ts
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-reqquli} -d ${DB_NAME:-azure_reqquli}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-reqquli_admin} -d ${DB_NAME:-reqquli_db}"]
       interval: 10s
       timeout: 5s
       retries: 5

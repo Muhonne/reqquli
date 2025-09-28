@@ -80,8 +80,13 @@ export async function initializeDatabase(pool: Pool): Promise<void> {
     console.log('📦 Database schema not found, initializing...');
 
     // Get the scripts directory path
-    // In production, scripts are deployed alongside the built server
-    const scriptsDir = path.join(__dirname, '..', '..', '..', 'scripts');
+    // In development: src/server/config -> scripts (3 levels up)
+    // In production: dist/server/config -> scripts (also 3 levels up, but dist is inside wwwroot)
+    // Azure: /home/site/wwwroot/dist/server/config -> /home/site/wwwroot/scripts
+    const isDist = __dirname.includes('/dist/');
+    const scriptsDir = isDist
+      ? path.join(__dirname, '..', '..', '..', '..', 'scripts')  // dist/server/config -> root/scripts
+      : path.join(__dirname, '..', '..', '..', 'scripts');       // src/server/config -> root/scripts
 
     // Execute database setup
     const setupPath = path.join(scriptsDir, 'database-setup.sql');
@@ -120,6 +125,7 @@ export async function canConnectToDatabase(pool: Pool): Promise<boolean> {
     client.release();
     return true;
   } catch (error) {
+    console.log('DB connection failed', error)
     return false;
   }
 }

@@ -8,13 +8,22 @@ dotenv.config();
 const dbConfig: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
-  user: process.env.DB_USER || 'reqquli',
+  user: process.env.DB_USER || 'reqquli_admin',
   password: process.env.DB_PASSWORD || 'reqquli_dev',
-  database: process.env.DB_NAME || 'azure_quire',
+  database: process.env.DB_NAME || 'reqquli_db',
   max: process.env.NODE_ENV === 'test' ? 5 : 20, // Fewer connections for tests
   idleTimeoutMillis: process.env.NODE_ENV === 'test' ? 5000 : 30000, // Shorter idle timeout for tests
   connectionTimeoutMillis: 2000, // How long to wait when connecting a new client
 };
+
+console.log('Database configuration:', {
+  host: dbConfig.host,
+  port: dbConfig.port,
+  user: dbConfig.user,
+  database: dbConfig.database,
+  ssl: !!dbConfig.ssl,
+  NODE_ENV: process.env.NODE_ENV
+});
 
 // Production configuration overrides
 if (process.env.NODE_ENV === 'production') {

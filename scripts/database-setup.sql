@@ -844,9 +844,11 @@ GROUP BY DATE(occurred_at)
 ORDER BY date DESC;
 
 -- Grant appropriate permissions
-GRANT SELECT ON audit_events TO reqquli_db_user;
-GRANT SELECT ON audit_trail TO reqquli_db_user;
-GRANT SELECT ON user_activity TO reqquli_db_user;
-GRANT SELECT ON system_metrics TO reqquli_db_user;
-GRANT EXECUTE ON FUNCTION log_audit_event TO reqquli_db_user;
+-- These grants ensure the current user has proper permissions
+-- Works for both local development and Azure deployment
+GRANT SELECT ON audit_events TO CURRENT_USER;
+GRANT SELECT ON audit_trail TO CURRENT_USER;
+GRANT SELECT ON user_activity TO CURRENT_USER;
+GRANT SELECT ON system_metrics TO CURRENT_USER;
+GRANT EXECUTE ON FUNCTION log_audit_event TO CURRENT_USER;
 
