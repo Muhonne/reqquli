@@ -107,9 +107,17 @@ az webapp log config \
 
 ```bash
 # Build
-rm -rf dist node_modules && rm deploy.zip && npm install && npm run build
+rm -rf dist node_modules && rm -f deploy.zip
 
-# Package
+# Install all dependencies for build
+npm ci
+npm run build
+
+# Reinstall production dependencies only (skip prepare script)
+rm -rf node_modules
+npm ci --omit=dev --ignore-scripts
+
+# Package (with production deps only)
 zip -r deploy.zip \
   dist \
   node_modules \

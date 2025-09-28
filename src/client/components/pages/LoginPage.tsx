@@ -4,9 +4,17 @@ import axios from 'axios';
 import { Input } from '../atoms/Input';
 import { Button } from '../atoms/Button';
 import { Text } from '../atoms/Text';
+// @ts-ignore - Vite handles JSON imports
+import { version } from '../../../../package.json';
 
 export function LoginPage() {
   const navigate = useNavigate();
+
+  // Build info - set at build time via Vite
+  const buildTime = import.meta.env.VITE_BUILD_TIME || new Date().toISOString();
+  const gitCommit = import.meta.env.VITE_GIT_COMMIT || 'dev';
+  const gitBranch = import.meta.env.VITE_GIT_BRANCH || 'local';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -161,6 +169,16 @@ export function LoginPage() {
             </Text>
           </div>
         </form>
+
+        {/* Version info */}
+        <div className="text-center mt-8 space-y-1">
+          <Text className="text-xs text-gray-400">
+            v{version} • {gitBranch}@{gitCommit}
+          </Text>
+          <Text className="text-xs text-gray-400">
+            Built: {buildTime.replace('T', ' ').split('.')[0]}
+          </Text>
+        </div>
       </div>
     </main>
   );
