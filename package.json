@@ -19,7 +19,8 @@
     "test:e2e": "playwright test --grep-invert=\\.smoke\\.",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:smoke": "playwright test e2e/smoke-test-traceability.smoke.ts --workers=1",
-    "prepare": "husky"
+    "prepare": "husky",
+    "deploy:build": "rm -rf dist node_modules && rm -f deploy.zip && npm ci && npm run build && rm -rf node_modules && npm ci --omit=dev --ignore-scripts && zip -r deploy.zip dist node_modules package*.json scripts/*.sql .deployment"
   },
   "dependencies": {
     "@types/cookie-parser": "^1.4.9",
