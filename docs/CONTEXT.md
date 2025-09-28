@@ -416,9 +416,9 @@ JWT_SECRET=                  # Min 32 chars, generate with: openssl rand -base64
 # Database
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=reqquli
-DB_PASSWORD=reqquli_dev
-DB_NAME=azure_reqquli
+DB_USER=reqquli_db_user
+DB_PASSWORD=reqquli_dev_password
+DB_NAME=reqquli_db
 
 # Application
 NODE_ENV=development         # development | production | test

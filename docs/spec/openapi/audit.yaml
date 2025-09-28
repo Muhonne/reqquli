@@ -1,0 +1,411 @@
+openapi: 3.0.0
+info:
+  title: Audit API
+  version: 1.0.0
+  description: Audit logging and activity tracking endpoints
+
+paths:
+  /audit/events:
+    get:
+      summary: Get audit events
+      description: Retrieve audit events with optional filtering
+      tags:
+        - Audit
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [authentication, user_requirement, system_requirement, trace, test_case, test_run]
+          description: Filter by event type
+        - in: query
+          name: entityId
+          schema:
+            type: string
+          description: Filter by entity ID
+        - in: query
+          name: userId
+          schema:
+            type: string
+          description: Filter by user ID
+        - in: query
+          name: action
+          schema:
+            type: string
+          description: Filter by action
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter events after this date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter events before this date
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Number of results per page
+      responses:
+        '200':
+          description: List of audit events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditEvent'
+                  pagination:
+                    $ref: '../common.yaml#/components/schemas/Pagination'
+        '401':
+          $ref: '../common.yaml#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '../common.yaml#/components/responses/InternalServerError'
+
+  /audit/events/aggregate/{type}/{id}:
+    get:
+      summary: Get aggregated audit events for an entity
+      description: Retrieve all audit events related to a specific entity
+      tags:
+        - Audit
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum: [user_requirement, system_requirement, test_case, test_run]
+          description: Entity type
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Entity ID
+      responses:
+        '200':
+          description: Aggregated audit events for the entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entityType:
+                    type: string
+                  entityId:
+                    type: string
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditEvent'
+        '401':
+          $ref: '../common.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../common.yaml#/components/responses/NotFoundError'
+        '500':
+          $ref: '../common.yaml#/components/responses/InternalServerError'
+
+  /audit/events/user/{userId}:
+    get:
+      summary: Get audit events for a user
+      description: Retrieve all audit events performed by a specific user
+      tags:
+        - Audit
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Number of results per page
+      responses:
+        '200':
+          description: User's audit events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditEvent'
+                  pagination:
+                    $ref: '../common.yaml#/components/schemas/Pagination'
+        '401':
+          $ref: '../common.yaml#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '../common.yaml#/components/responses/NotFoundError'
+        '500':
+          $ref: '../common.yaml#/components/responses/InternalServerError'
+
+  /audit/events/log:
+    post:
+      summary: Log a custom audit event
+      description: Manually log an audit event
+      tags:
+        - Audit
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - eventType
+                - action
+                - entityId
+              properties:
+                eventType:
+                  type: string
+                  description: Type of event
+                action:
+                  type: string
+                  description: Action performed
+                entityId:
+                  type: string
+                  description: ID of the entity affected
+                details:
+                  type: object
+                  description: Additional event details
+      responses:
+        '201':
+          description: Audit event logged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEvent'
+        '400':
+          $ref: '../common.yaml#/components/responses/BadRequestError'
+        '401':
+          $ref: '../common.yaml#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '../common.yaml#/components/responses/InternalServerError'
+
+  /audit/activity/users:
+    get:
+      summary: Get user activity summary
+      description: Retrieve activity summary for all users
+      tags:
+        - Audit
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User activity summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: string
+                          format: uuid
+                        fullName:
+                          type: string
+                        lastActive:
+                          type: string
+                          format: date-time
+                        totalEvents:
+                          type: integer
+                        recentActivity:
+                          type: array
+                          items:
+                            type: string
+        '401':
+          $ref: '../common.yaml#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '../common.yaml#/components/responses/InternalServerError'
+
+  /audit/metrics/system:
+    get:
+      summary: Get system metrics
+      description: Retrieve system-wide audit metrics
+      tags:
+        - Audit
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Start date for metrics
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: End date for metrics
+      responses:
+        '200':
+          description: System metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalEvents:
+                    type: integer
+                  eventsByType:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                  activeUsers:
+                    type: integer
+                  recentEvents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditEvent'
+        '401':
+          $ref: '../common.yaml#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '../common.yaml#/components/responses/InternalServerError'
+
+  /audit/timeline:
+    get:
+      summary: Get audit timeline
+      description: Retrieve chronological timeline of audit events
+      tags:
+        - Audit
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Start date for timeline
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: End date for timeline
+        - in: query
+          name: entityType
+          schema:
+            type: string
+          description: Filter by entity type
+      responses:
+        '200':
+          description: Audit event timeline
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timeline:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        events:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/AuditEvent'
+        '401':
+          $ref: '../common.yaml#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '../common.yaml#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+          enum: [authentication, user_requirement, system_requirement, trace, test_case, test_run]
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        userFullName:
+          type: string
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+        success:
+          type: boolean
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: auth_token
