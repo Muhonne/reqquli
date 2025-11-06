@@ -172,10 +172,10 @@ export function LoginPage() {
 
         {/* Version info */}
         <div className="text-center mt-8 space-y-1">
-          <Text className="text-xs text-gray-400">
+          <Text variant="caption" color="secondary">
             v{version} • {gitBranch}@{gitCommit}
           </Text>
-          <Text className="text-xs text-gray-400">
+          <Text variant="caption" color="secondary">
             Built: {buildTime.replace('T', ' ').split('.')[0]}
           </Text>
         </div>
