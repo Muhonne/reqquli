@@ -66,9 +66,13 @@ describe('User Requirements API', () => {
           }
         );
         fail('Should have rejected duplicate title');
-      } catch (error: any) {
-        expect(error.response.status).toBe(409);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(409);
         expect(error.response.data.error.message).toContain('already exists');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
   });
@@ -114,7 +118,7 @@ describe('User Requirements API', () => {
       );
 
       expect(response.status).toBe(200);
-      response.data.data.forEach((req: any) => {
+      response.data.data.forEach((req: { status: string }) => {
         expect(req.status).toBe('draft');
       });
     });
@@ -128,7 +132,7 @@ describe('User Requirements API', () => {
       );
 
       expect(response.status).toBe(200);
-      const ids = response.data.data.map((r: any) => r.id);
+      const ids = response.data.data.map((r: { id: string }) => r.id);
       const sortedIds = [...ids].sort();
       expect(ids).toEqual(sortedIds);
     });
@@ -156,7 +160,7 @@ describe('User Requirements API', () => {
       );
 
       expect(response.status).toBe(200);
-      const titles = response.data.data.map((r: any) => r.title);
+      const titles = response.data.data.map((r: { title: string }) => r.title);
       const sortedTitles = [...titles].sort((a, b) => a.localeCompare(b));
       expect(titles).toEqual(sortedTitles);
     });
@@ -170,7 +174,7 @@ describe('User Requirements API', () => {
       );
 
       expect(response.status).toBe(200);
-      const titles = response.data.data.map((r: any) => r.title);
+      const titles = response.data.data.map((r: { title: string }) => r.title);
       const sortedTitles = [...titles].sort((a, b) => b.localeCompare(a));
       expect(titles).toEqual(sortedTitles);
     });
@@ -184,7 +188,7 @@ describe('User Requirements API', () => {
       );
 
       expect(response.status).toBe(200);
-      const dates = response.data.data.map((r: any) => new Date(r.createdAt).getTime());
+      const dates = response.data.data.map((r: { createdAt: string }) => new Date(r.createdAt).getTime());
       for (let i = 1; i < dates.length; i++) {
         expect(dates[i]).toBeGreaterThanOrEqual(dates[i - 1]);
       }
@@ -199,7 +203,7 @@ describe('User Requirements API', () => {
       );
 
       expect(response.status).toBe(200);
-      const dates = response.data.data.map((r: any) => new Date(r.createdAt).getTime());
+      const dates = response.data.data.map((r: { createdAt: string }) => new Date(r.createdAt).getTime());
       for (let i = 1; i < dates.length; i++) {
         expect(dates[i]).toBeLessThanOrEqual(dates[i - 1]);
       }
@@ -215,11 +219,11 @@ describe('User Requirements API', () => {
 
       expect(response.status).toBe(200);
       // Check all are draft
-      response.data.data.forEach((req: any) => {
+      response.data.data.forEach((req: { status: string }) => {
         expect(req.status).toBe('draft');
       });
       // Check sorted by title
-      const titles = response.data.data.map((r: any) => r.title);
+      const titles = response.data.data.map((r: { title: string }) => r.title);
       const sortedTitles = [...titles].sort((a, b) => a.localeCompare(b));
       expect(titles).toEqual(sortedTitles);
     });
@@ -233,7 +237,7 @@ describe('User Requirements API', () => {
       );
 
       expect(response.status).toBe(200);
-      const ids = response.data.data.map((r: any) => r.id);
+      const ids = response.data.data.map((r: { id: string }) => r.id);
       const sortedIds = [...ids].sort().reverse();
       expect(ids).toEqual(sortedIds);
     });
@@ -347,9 +351,13 @@ describe('User Requirements API', () => {
           }
         );
         fail('Should have required password');
-      } catch (error: any) {
-        expect(error.response.status).toBe(400);
-        expect(error.response.data.error.message).toContain('Password');
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(400);
+          expect(error.response.data.error.message).toContain('Password');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
 
@@ -365,10 +373,256 @@ describe('User Requirements API', () => {
           }
         );
         fail('Should have rejected wrong password');
-      } catch (error: any) {
-        expect(error.response.status).toBe(401);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(401);
         expect(error.response.data.error.message).toContain('password');
+        } else {
+          fail('Expected axios error');
+        }
       }
+    });
+  });
+
+  describe('Revision Management', () => {
+    it('should start with revision 0 on creation', async () => {
+      const createRes = await axios.post(
+        `${API_URL}/api/user-requirements`,
+        {
+          title: 'Revision Test ' + Date.now(),
+          description: 'This requirement tests that new requirements start with revision 0.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(createRes.data.requirement.revision).toBe(0);
+    });
+
+    it('should increment revision on first approval (0 -> 1)', async () => {
+      const createRes = await axios.post(
+        `${API_URL}/api/user-requirements`,
+        {
+          title: 'First Approval Test ' + Date.now(),
+          description: 'This requirement tests that revision increments from 0 to 1 on first approval.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const reqId = createRes.data.requirement.id;
+      expect(createRes.data.requirement.revision).toBe(0);
+
+      const approveRes = await axios.post(
+        `${API_URL}/api/user-requirements/${reqId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(approveRes.data.requirement.revision).toBe(1);
+      expect(approveRes.data.requirement.status).toBe('approved');
+    });
+
+    it('should not increment revision when editing approved requirement', async () => {
+      // Create and approve
+      const createRes = await axios.post(
+        `${API_URL}/api/user-requirements`,
+        {
+          title: 'Edit After Approval ' + Date.now(),
+          description: 'This requirement will be approved then edited to verify revision does not increment on edit.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const reqId = createRes.data.requirement.id;
+
+      // Approve (0 -> 1)
+      await axios.post(
+        `${API_URL}/api/user-requirements/${reqId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Edit (should reset to draft but keep revision)
+      const editRes = await axios.patch(
+        `${API_URL}/api/user-requirements/${reqId}`,
+        {
+          description: 'Edited description that should not increment revision.',
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(editRes.data.requirement.revision).toBe(1);
+      expect(editRes.data.requirement.status).toBe('draft');
+    });
+
+    it('should increment revision on re-approval after edit (1 -> 2)', async () => {
+      // Create, approve, edit
+      const createRes = await axios.post(
+        `${API_URL}/api/user-requirements`,
+        {
+          title: 'Re-approval Test ' + Date.now(),
+          description: 'This requirement tests that revision increments on re-approval after editing.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const reqId = createRes.data.requirement.id;
+
+      // First approval (0 -> 1)
+      await axios.post(
+        `${API_URL}/api/user-requirements/${reqId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Edit (resets to draft, revision stays 1)
+      await axios.patch(
+        `${API_URL}/api/user-requirements/${reqId}`,
+        {
+          description: 'Edited to test re-approval revision increment.',
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Re-approve (1 -> 2)
+      const reapproveRes = await axios.post(
+        `${API_URL}/api/user-requirements/${reqId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(reapproveRes.data.requirement.revision).toBe(2);
+      expect(reapproveRes.data.requirement.status).toBe('approved');
+    });
+
+    it('should increment revision on multiple approval cycles', async () => {
+      // Create requirement
+      const createRes = await axios.post(
+        `${API_URL}/api/user-requirements`,
+        {
+          title: 'Multiple Approvals Test ' + Date.now(),
+          description: 'This requirement tests multiple approval cycles to verify revision keeps incrementing.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const reqId = createRes.data.requirement.id;
+
+      // First approval cycle: 0 -> 1
+      await axios.post(
+        `${API_URL}/api/user-requirements/${reqId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Edit and re-approve: 1 -> 2
+      await axios.patch(
+        `${API_URL}/api/user-requirements/${reqId}`,
+        {
+          description: 'First edit cycle.',
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      await axios.post(
+        `${API_URL}/api/user-requirements/${reqId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Second edit and re-approve: 2 -> 3
+      await axios.patch(
+        `${API_URL}/api/user-requirements/${reqId}`,
+        {
+          description: 'Second edit cycle.',
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const finalApproveRes = await axios.post(
+        `${API_URL}/api/user-requirements/${reqId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(finalApproveRes.data.requirement.revision).toBe(3);
+      expect(finalApproveRes.data.requirement.status).toBe('approved');
+    });
+
+    it('should increment revision when approving via PATCH endpoint', async () => {
+      // Create requirement
+      const createRes = await axios.post(
+        `${API_URL}/api/user-requirements`,
+        {
+          title: 'PATCH Approval Test ' + Date.now(),
+          description: 'This requirement tests approval via PATCH endpoint to verify revision increments.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const reqId = createRes.data.requirement.id;
+      expect(createRes.data.requirement.revision).toBe(0);
+
+      // Approve via PATCH (must include at least title or description)
+      const patchApproveRes = await axios.patch(
+        `${API_URL}/api/user-requirements/${reqId}`,
+        {
+          description: 'Updated description for PATCH approval test.',
+          status: 'approved',
+          password: 'salasana!123',
+          approvalNotes: 'Approved via PATCH endpoint'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(patchApproveRes.data.requirement.revision).toBe(1);
+      expect(patchApproveRes.data.requirement.status).toBe('approved');
     });
   });
 
@@ -405,7 +659,7 @@ describe('User Requirements API', () => {
         }
       );
       
-      const found = listRes.data.data.find((r: any) => r.id === reqId);
+      const found = listRes.data.data.find((r: { id: string }) => r.id === reqId);
       expect(found).toBeUndefined();
     });
   });

@@ -110,9 +110,13 @@ describe('System Requirements API', () => {
           }
         );
         fail('Should have rejected duplicate title');
-      } catch (error: any) {
-        expect(error.response.status).toBe(409);
-        expect(error.response.data.error.message).toContain('unique');
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(409);
+          expect(error.response.data.error.message).toContain('unique');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
 
@@ -198,7 +202,7 @@ describe('System Requirements API', () => {
       );
 
       expect(response.status).toBe(200);
-      response.data.data.forEach((req: any) => {
+      response.data.data.forEach((req: { status: string }) => {
         expect(req.status).toBe('draft');
       });
     });
@@ -217,7 +221,7 @@ describe('System Requirements API', () => {
       
       // Should find the system requirement we created and traced earlier
       if (response.data.data.length > 0) {
-        const sr = response.data.data.find((req: any) => req.id === testSystemReqId);
+        const sr = response.data.data.find((req: { id: string }) => req.id === testSystemReqId);
         expect(sr).toBeDefined();
       }
     });
@@ -261,9 +265,13 @@ describe('System Requirements API', () => {
           }
         );
         fail('Should have returned 404');
-      } catch (error: any) {
-        expect(error.response.status).toBe(404);
-        expect(error.response.data.error.message).toContain('not found');
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(404);
+          expect(error.response.data.error.message).toContain('not found');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
   });
@@ -418,9 +426,13 @@ describe('System Requirements API', () => {
           }
         );
         fail('Should have required password');
-      } catch (error: any) {
-        expect(error.response.status).toBe(400);
-        expect(error.response.data.error.message).toContain('Password');
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(400);
+          expect(error.response.data.error.message).toContain('Password');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
 
@@ -436,9 +448,13 @@ describe('System Requirements API', () => {
           }
         );
         fail('Should have rejected wrong password');
-      } catch (error: any) {
-        expect(error.response.status).toBe(401);
-        expect(error.response.data.error.message).toContain('password');
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(401);
+          expect(error.response.data.error.message).toContain('password');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
 
@@ -479,10 +495,256 @@ describe('System Requirements API', () => {
           }
         );
         fail('Should not allow double approval');
-      } catch (error: any) {
-        expect(error.response.status).toBe(400);
-        expect(error.response.data.error.message).toContain('Only draft');
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(400);
+          expect(error.response.data.error.message).toContain('Only draft');
+        } else {
+          fail('Expected axios error');
+        }
       }
+    });
+  });
+
+  describe('Revision Management', () => {
+    it('should start with revision 0 on creation', async () => {
+      const createRes = await axios.post(
+        `${API_URL}/api/system-requirements`,
+        {
+          title: 'Revision Test ' + Date.now(),
+          description: 'This system requirement tests that new requirements start with revision 0.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(createRes.data.requirement.revision).toBe(0);
+    });
+
+    it('should increment revision on first approval (0 -> 1)', async () => {
+      const createRes = await axios.post(
+        `${API_URL}/api/system-requirements`,
+        {
+          title: 'First Approval Test ' + Date.now(),
+          description: 'This system requirement tests that revision increments from 0 to 1 on first approval.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const srId = createRes.data.requirement.id;
+      expect(createRes.data.requirement.revision).toBe(0);
+
+      const approveRes = await axios.post(
+        `${API_URL}/api/system-requirements/${srId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(approveRes.data.requirement.revision).toBe(1);
+      expect(approveRes.data.requirement.status).toBe('approved');
+    });
+
+    it('should not increment revision when editing approved requirement', async () => {
+      // Create and approve
+      const createRes = await axios.post(
+        `${API_URL}/api/system-requirements`,
+        {
+          title: 'Edit After Approval ' + Date.now(),
+          description: 'This system requirement will be approved then edited to verify revision does not increment on edit.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const srId = createRes.data.requirement.id;
+
+      // Approve (0 -> 1)
+      await axios.post(
+        `${API_URL}/api/system-requirements/${srId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Edit (should reset to draft but keep revision)
+      const editRes = await axios.patch(
+        `${API_URL}/api/system-requirements/${srId}`,
+        {
+          description: 'Edited description that should not increment revision.',
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(editRes.data.requirement.revision).toBe(1);
+      expect(editRes.data.requirement.status).toBe('draft');
+    });
+
+    it('should increment revision on re-approval after edit (1 -> 2)', async () => {
+      // Create, approve, edit
+      const createRes = await axios.post(
+        `${API_URL}/api/system-requirements`,
+        {
+          title: 'Re-approval Test ' + Date.now(),
+          description: 'This system requirement tests that revision increments on re-approval after editing.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const srId = createRes.data.requirement.id;
+
+      // First approval (0 -> 1)
+      await axios.post(
+        `${API_URL}/api/system-requirements/${srId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Edit (resets to draft, revision stays 1)
+      await axios.patch(
+        `${API_URL}/api/system-requirements/${srId}`,
+        {
+          description: 'Edited to test re-approval revision increment.',
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Re-approve (1 -> 2)
+      const reapproveRes = await axios.post(
+        `${API_URL}/api/system-requirements/${srId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(reapproveRes.data.requirement.revision).toBe(2);
+      expect(reapproveRes.data.requirement.status).toBe('approved');
+    });
+
+    it('should increment revision on multiple approval cycles', async () => {
+      // Create requirement
+      const createRes = await axios.post(
+        `${API_URL}/api/system-requirements`,
+        {
+          title: 'Multiple Approvals Test ' + Date.now(),
+          description: 'This system requirement tests multiple approval cycles to verify revision keeps incrementing.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const srId = createRes.data.requirement.id;
+
+      // First approval cycle: 0 -> 1
+      await axios.post(
+        `${API_URL}/api/system-requirements/${srId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Edit and re-approve: 1 -> 2
+      await axios.patch(
+        `${API_URL}/api/system-requirements/${srId}`,
+        {
+          description: 'First edit cycle.',
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      await axios.post(
+        `${API_URL}/api/system-requirements/${srId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Second edit and re-approve: 2 -> 3
+      await axios.patch(
+        `${API_URL}/api/system-requirements/${srId}`,
+        {
+          description: 'Second edit cycle.',
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const finalApproveRes = await axios.post(
+        `${API_URL}/api/system-requirements/${srId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(finalApproveRes.data.requirement.revision).toBe(3);
+      expect(finalApproveRes.data.requirement.status).toBe('approved');
+    });
+
+    it('should increment revision when approving via PATCH endpoint', async () => {
+      // Create requirement
+      const createRes = await axios.post(
+        `${API_URL}/api/system-requirements`,
+        {
+          title: 'PATCH Approval Test ' + Date.now(),
+          description: 'This system requirement tests approval via PATCH endpoint to verify revision increments.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const srId = createRes.data.requirement.id;
+      expect(createRes.data.requirement.revision).toBe(0);
+
+      // Approve via PATCH (must include at least title or description)
+      const patchApproveRes = await axios.patch(
+        `${API_URL}/api/system-requirements/${srId}`,
+        {
+          description: 'Updated description for PATCH approval test.',
+          status: 'approved',
+          password: 'salasana!123',
+          approvalNotes: 'Approved via PATCH endpoint'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(patchApproveRes.data.requirement.revision).toBe(1);
+      expect(patchApproveRes.data.requirement.status).toBe('approved');
     });
   });
 
@@ -519,7 +781,7 @@ describe('System Requirements API', () => {
         }
       );
       
-      const found = listRes.data.data.find((r: any) => r.id === srId);
+      const found = listRes.data.data.find((r: { id: string }) => r.id === srId);
       expect(found).toBeUndefined();
     });
 
@@ -638,7 +900,7 @@ describe('System Requirements API', () => {
       
       // Should find the system requirement we traced earlier
       if (response.data.data.length > 0) {
-        const sr = response.data.data.find((req: any) => req.id === testSystemReqId);
+        const sr = response.data.data.find((req: { id: string }) => req.id === testSystemReqId);
         expect(sr).toBeDefined();
       }
     });
@@ -711,8 +973,12 @@ describe('System Requirements API', () => {
           `${API_URL}/api/system-requirements/trace-from/${testUserReqId}`
         );
         fail('Should have required authentication');
-      } catch (error: any) {
-        expect(error.response.status).toBe(401);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(401);
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
   });

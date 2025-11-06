@@ -65,9 +65,13 @@ describe('Test Case Management API', () => {
           }
         );
         fail('Should have rejected missing title');
-      } catch (error: any) {
-        expect(error.response.status).toBe(422);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(422);
         expect(error.response.data.error.message).toContain('required');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
 
@@ -87,8 +91,11 @@ describe('Test Case Management API', () => {
             headers: { Authorization: `Bearer ${authToken}` }
           }
         );
-      } catch (error: any) {
-        console.error('First create failed:', error.response?.data);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          // Log error for debugging but rethrow
+          throw error;
+        }
         throw error;
       }
 
@@ -106,9 +113,13 @@ describe('Test Case Management API', () => {
           }
         );
         fail('Should have rejected duplicate title');
-      } catch (error: any) {
-        expect(error.response.status).toBe(409);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(409);
         expect(error.response.data.error.message).toContain('exists');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
   });
@@ -139,9 +150,13 @@ describe('Test Case Management API', () => {
           }
         );
         fail('Should have returned 404');
-      } catch (error: any) {
-        expect(error.response.status).toBe(404);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(404);
         expect(error.response.data.error.message).toContain('not found');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
 
@@ -149,8 +164,12 @@ describe('Test Case Management API', () => {
       try {
         await axios.get(`${API_URL}/api/test-cases/${testCaseId}`);
         fail('Should have required authentication');
-      } catch (error: any) {
-        expect(error.response.status).toBe(401);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(401);
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
   });
@@ -208,8 +227,7 @@ describe('Test Case Management API', () => {
       const editRes = await axios.patch(
         `${API_URL}/api/test-cases/${tcId}`,
         {
-          description: 'Edited after approval',
-          password: 'salasana!123'
+          description: 'Edited after approval'
         },
         {
           headers: { Authorization: `Bearer ${authToken}` }
@@ -218,6 +236,8 @@ describe('Test Case Management API', () => {
 
       expect(editRes.status).toBe(200);
       expect(editRes.data.testCase.status).toBe('draft');
+      // Test cases increment revision when editing approved (1 -> 2)
+      expect(editRes.data.testCase.revision).toBe(2);
     });
   });
 
@@ -250,6 +270,7 @@ describe('Test Case Management API', () => {
       expect(response.status).toBe(200);
       expect(response.data.success).toBe(true);
       expect(response.data.testCase.status).toBe('approved');
+      expect(response.data.testCase.revision).toBe(1); // 0 -> 1 on first approval
       expect(response.data.testCase.approvedBy).toBeDefined();
       expect(response.data.testCase.approvedAt).toBeDefined();
     });
@@ -264,9 +285,13 @@ describe('Test Case Management API', () => {
           }
         );
         fail('Should have required password');
-      } catch (error: any) {
-        expect(error.response.status).toBe(400);
-        expect(error.response.data.error.message).toContain('Password');
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(400);
+          expect(error.response.data.error.message).toContain('Password');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
 
@@ -282,10 +307,258 @@ describe('Test Case Management API', () => {
           }
         );
         fail('Should have rejected wrong password');
-      } catch (error: any) {
-        expect(error.response.status).toBe(401);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(401);
         expect(error.response.data.error.message).toContain('password');
+        } else {
+          fail('Expected axios error');
+        }
       }
+    });
+  });
+
+  describe('Revision Management', () => {
+    it('should start with revision 0 on creation', async () => {
+      const createRes = await axios.post(
+        `${API_URL}/api/test-cases`,
+        {
+          title: 'Revision Test ' + Date.now(),
+          description: 'This test case tests that new test cases start with revision 0.',
+          steps: []
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(createRes.data.testCase.revision).toBe(0);
+    });
+
+    it('should increment revision on first approval (0 -> 1)', async () => {
+      const createRes = await axios.post(
+        `${API_URL}/api/test-cases`,
+        {
+          title: 'First Approval Test ' + Date.now(),
+          description: 'This test case tests that revision increments from 0 to 1 on first approval.',
+          steps: []
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const tcId = createRes.data.testCase.id;
+      expect(createRes.data.testCase.revision).toBe(0);
+
+      const approveRes = await axios.put(
+        `${API_URL}/api/test-cases/${tcId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(approveRes.data.testCase.revision).toBe(1);
+      expect(approveRes.data.testCase.status).toBe('approved');
+    });
+
+    it('should increment revision when editing approved test case (1 -> 2)', async () => {
+      // Create and approve
+      const createRes = await axios.post(
+        `${API_URL}/api/test-cases`,
+        {
+          title: 'Edit After Approval ' + Date.now(),
+          description: 'This test case will be approved then edited to verify revision increments on edit.',
+          steps: []
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const tcId = createRes.data.testCase.id;
+
+      // Approve (0 -> 1)
+      await axios.put(
+        `${API_URL}/api/test-cases/${tcId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Edit (should increment revision AND reset to draft)
+      const editRes = await axios.patch(
+        `${API_URL}/api/test-cases/${tcId}`,
+        {
+          description: 'Edited description that should increment revision.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(editRes.data.testCase.revision).toBe(2);
+      expect(editRes.data.testCase.status).toBe('draft');
+    });
+
+    it('should increment revision on re-approval after edit (2 -> 3)', async () => {
+      // Create, approve, edit
+      const createRes = await axios.post(
+        `${API_URL}/api/test-cases`,
+        {
+          title: 'Re-approval Test ' + Date.now(),
+          description: 'This test case tests that revision increments on re-approval after editing.',
+          steps: []
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const tcId = createRes.data.testCase.id;
+
+      // First approval (0 -> 1)
+      await axios.put(
+        `${API_URL}/api/test-cases/${tcId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Edit (increments revision: 1 -> 2, resets to draft)
+      await axios.patch(
+        `${API_URL}/api/test-cases/${tcId}`,
+        {
+          description: 'Edited to test re-approval revision increment.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Re-approve (2 -> 3)
+      const reapproveRes = await axios.put(
+        `${API_URL}/api/test-cases/${tcId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(reapproveRes.data.testCase.revision).toBe(3);
+      expect(reapproveRes.data.testCase.status).toBe('approved');
+    });
+
+    it('should increment revision on multiple approval cycles', async () => {
+      // Create test case
+      const createRes = await axios.post(
+        `${API_URL}/api/test-cases`,
+        {
+          title: 'Multiple Approvals Test ' + Date.now(),
+          description: 'This test case tests multiple approval cycles to verify revision keeps incrementing.',
+          steps: []
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const tcId = createRes.data.testCase.id;
+
+      // First approval cycle: 0 -> 1
+      await axios.put(
+        `${API_URL}/api/test-cases/${tcId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Edit (increments: 1 -> 2, resets to draft)
+      await axios.patch(
+        `${API_URL}/api/test-cases/${tcId}`,
+        {
+          description: 'First edit cycle.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      // Re-approve (2 -> 3)
+      await axios.put(
+        `${API_URL}/api/test-cases/${tcId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      // Second edit (increments: 3 -> 4, resets to draft)
+      await axios.patch(
+        `${API_URL}/api/test-cases/${tcId}`,
+        {
+          description: 'Second edit cycle.'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      // Final re-approve (4 -> 5)
+      const finalApproveRes = await axios.put(
+        `${API_URL}/api/test-cases/${tcId}/approve`,
+        {
+          password: 'salasana!123'
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(finalApproveRes.data.testCase.revision).toBe(5);
+      expect(finalApproveRes.data.testCase.status).toBe('approved');
+    });
+
+    it('should not increment revision when editing draft test case', async () => {
+      // Create draft test case
+      const createRes = await axios.post(
+        `${API_URL}/api/test-cases`,
+        {
+          title: 'Draft Edit Test ' + Date.now(),
+          description: 'This test case tests that editing a draft does not increment revision.',
+          steps: []
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+      const tcId = createRes.data.testCase.id;
+      expect(createRes.data.testCase.revision).toBe(0);
+      expect(createRes.data.testCase.status).toBe('draft');
+
+      // Edit draft (should not increment revision)
+      const editRes = await axios.patch(
+        `${API_URL}/api/test-cases/${tcId}`,
+        {
+          description: 'Edited draft description.',
+        },
+        {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }
+      );
+
+      expect(editRes.data.testCase.revision).toBe(0);
+      expect(editRes.data.testCase.status).toBe('draft');
     });
   });
 
@@ -324,8 +597,12 @@ describe('Test Case Management API', () => {
           }
         );
         fail('Should have been deleted');
-      } catch (error: any) {
-        expect(error.response.status).toBe(404);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(404);
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
 
@@ -338,8 +615,12 @@ describe('Test Case Management API', () => {
           }
         );
         fail('Should have returned error');
-      } catch (error: any) {
-        expect(error.response.status).toBe(404);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(404);
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
   });
@@ -513,9 +794,13 @@ describe('Test Case Management API', () => {
           }
         );
         fail('Should have required password');
-      } catch (error: any) {
-        expect(error.response.status).toBe(400);
-        expect(error.response.data.error.message).toContain('Password');
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(400);
+          expect(error.response.data.error.message).toContain('Password');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
   });
@@ -581,9 +866,13 @@ describe('Test Case Management API', () => {
           }
         );
         fail('Should have rejected invalid status');
-      } catch (error: any) {
-        expect(error.response.status).toBe(422);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error) && error.response) {
+          expect(error.response.status).toBe(422);
         expect(error.response.data.error.message).toContain('Invalid status');
+        } else {
+          fail('Expected axios error');
+        }
       }
     });
   });

@@ -16,7 +16,7 @@ import {
 const router = express.Router();
 
 // No mapping needed - database now uses camelCase
-function mapRequirementFromDb(dbRow: any) {
+function mapRequirementFromDb(dbRow: Record<string, unknown>) {
   return dbRow;
 }
 
@@ -62,13 +62,13 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
       LEFT JOIN users modifier ON ur.modified_by = modifier.id
       LEFT JOIN users approver ON ur.approved_by = approver.id
       WHERE ur.deleted_at IS NULL`;
-    const queryParams: any[] = [];
+    const queryParams: (string | number)[] = [];
     let paramCount = 0;
 
     if (status) {
       paramCount++;
       query += ` AND ur.status = $${paramCount}`;
-      queryParams.push(status);
+      queryParams.push(status as string);
     }
 
     // Add search filter if provided
@@ -86,7 +86,7 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
       ? (order as string).toUpperCase()
       : "ASC";
 
-    const columnMap: any = {
+    const columnMap: Record<string, string> = {
       id: "ur.id",
       title: "LOWER(ur.title)",
       createdAt: "ur.created_at",
@@ -112,13 +112,13 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
     // Get total count for pagination
     let countQuery =
       "SELECT COUNT(*) FROM user_requirements ur WHERE ur.deleted_at IS NULL";
-    const countParams: any[] = [];
+    const countParams: (string | number)[] = [];
     let countParamNum = 0;
 
     if (status) {
       countParamNum++;
       countQuery += ` AND ur.status = $${countParamNum}`;
-      countParams.push(status);
+      countParams.push(status as string);
     }
 
     if (search && search.toString().trim() !== "") {
@@ -418,7 +418,7 @@ router.patch("/:id", async (req: AuthenticatedRequest, res: Response) => {
 
     // Build dynamic update query
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: (string | number | Date | null)[] = [];
     let paramCount = 0;
 
     if (title) {
@@ -444,9 +444,8 @@ router.patch("/:id", async (req: AuthenticatedRequest, res: Response) => {
       updates.push(`status = $${paramCount}`);
       values.push("approved");
 
-      paramCount++;
-      updates.push(`revision = $${paramCount}`);
-      values.push(existing.revision === 0 ? 1 : existing.revision);
+      // Increment revision on approval
+      updates.push(`revision = revision + 1`);
 
       paramCount++;
       updates.push(`approved_at = $${paramCount}`);
@@ -548,8 +547,6 @@ router.post("/:id/approve", async (req: AuthenticatedRequest, res: Response) => 
       return badRequest(res, "Requirement not found or already approved");
     }
 
-    const existing = existingResult.rows[0];
-
     // Verify password
     const userResult = await pool.query(
       'SELECT password_hash AS "passwordHash" FROM users WHERE id = $1',
@@ -568,36 +565,29 @@ router.post("/:id/approve", async (req: AuthenticatedRequest, res: Response) => 
       return unauthorized(res, "Invalid password");
     }
 
-    // Determine revision increment (only 0->1 on first approval)
-    const newRevision = existing.revision === 0 ? 1 : existing.revision;
-
     // Update requirement with approval
     const updateResult = await pool.query(
-      `
-      UPDATE user_requirements
-      SET status = 'approved', revision = $1, approved_at = $2, approved_by = $3, approval_notes = $4
-      WHERE id = $5
-      RETURNING id,
-                title,
-                description,
-                status,
-                revision,
-                created_by AS "createdBy",
-                created_at AS "createdAt",
-                last_modified AS "lastModified",
-                modified_by AS "modifiedBy",
-                approved_at AS "approvedAt",
-                approved_by AS "approvedBy",
-                deleted_at AS "deletedAt",
-                approval_notes AS "approvalNotes"
-    `,
-      [
-        newRevision,
-        new Date(),
-        req.user.id,
-        approvalNotes || null,
-        normalizedId,
-      ],
+      `UPDATE user_requirements
+       SET status = 'approved',
+           revision = revision + 1,
+           approved_at = CURRENT_TIMESTAMP,
+           approved_by = $2,
+           approval_notes = $3
+       WHERE id = $1
+       RETURNING id,
+                 title,
+                 description,
+                 status,
+                 revision,
+                 created_by AS "createdBy",
+                 created_at AS "createdAt",
+                 last_modified AS "lastModified",
+                 modified_by AS "modifiedBy",
+                 approved_at AS "approvedAt",
+                 approved_by AS "approvedBy",
+                 deleted_at AS "deletedAt",
+                 approval_notes AS "approvalNotes"`,
+      [normalizedId, req.user.id, approvalNotes || null],
     );
 
     // Audit logging removed - table doesn't exist yet
