@@ -61,8 +61,8 @@ test.describe('Traceability', () => {
     });
 
     test('should navigate through trace links', async ({ page }) => {
-      // Navigate directly to UR-1 which has traces to SR-1, SR-6, SR-21, SR-55 (based on seed data)
-      await page.goto('/user-requirements/UR-1');
+      // Navigate directly to UR-2 which has traces to SR-2, SR-19, SR-26 (based on seed data)
+      await page.goto('/user-requirements/UR-2');
 
       // Wait for detail panel to load
       await page.waitForSelector('[data-testid="requirement-title-readonly"]', { timeout: 5000 });
@@ -89,8 +89,8 @@ test.describe('Traceability', () => {
       await expect(page).toHaveURL(/system-requirements/);
       await expect(page.locator(`text=/${srId}/`).first()).toBeVisible();
 
-      // Should show upstream trace back to UR-1
-      await expect(page.locator('text=/UR-1/').first()).toBeVisible();
+      // Should show upstream trace back to UR-2
+      await expect(page.locator('text=/UR-2/').first()).toBeVisible();
     });
   });
 
@@ -149,8 +149,8 @@ test.describe('Traceability', () => {
     });
 
     test('should remove trace relationship', async ({ page }) => {
-      // Navigate directly to UR-1 which has multiple trace relationships in seed data
-      await page.goto('/user-requirements/UR-1');
+      // Navigate directly to UR-4 which has multiple trace relationships in seed data (SR-4, SR-14)
+      await page.goto('/user-requirements/UR-4');
 
       // Wait for detail panel to load
       await page.waitForSelector('[data-testid="requirement-title-readonly"]', { timeout: 10000 });
