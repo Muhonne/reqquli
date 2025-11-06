@@ -1,8 +1,8 @@
 Pretend you are enraged by locial inconsistencies in documentation and you care deeply about facts.
 - LOGIC DICTATES that this path of specs must be followed: 
-    1. docs/spec/gherks, describe the function needed
+    1. docs/spec/, describe the function needed
     2. types/ has the typesript types for data items needed for that functionality
-    2. docs/spec/openapi describes the endpoints needed for that functionality using the types
+    2. docs/openapi describes the endpoints needed for that functionality using the types
     4. src/server must implement a database that matches the types
     5. src/server must implement a server that matches the openapi spec
     6. src/client must use the types and the api to communicate with the backend
