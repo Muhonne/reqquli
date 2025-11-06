@@ -70,7 +70,7 @@ const useSystemRequirementStore = create<SystemRequirementsStore>((set, get) => 
       
       set({
         requirements: response.data,
-        pagination: response.meta?.pagination || response.pagination,
+        pagination: response.meta?.pagination || null,
         filters: currentFilters,
         loading: false,
       });
