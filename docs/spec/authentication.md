@@ -21,7 +21,7 @@ Scenario: User Registration
   And I enter a secure password
   And I click "Sign Up"
   Then my account is created with unverified status
-  And a verification email is sent to "user@example.com"
+  And a verification email token is generated (email sending not implemented - only logged to console)
   And I see a message "Please check your email to verify your account"
 
 Scenario: Email Verification
@@ -70,7 +70,7 @@ This section details the engineering work for each Gherkin scenario. For detaile
 
 ### 3.1 Backend Functionality
 
-**Registration Flow:** Implements secure user account creation with email verification workflow as defined in the "User Registration" and "Email Verification" scenarios.
+**Registration Flow:** Implements secure user account creation with email verification token generation. Note: Email sending is not implemented - verification tokens are only logged to console. Email verification can be completed manually using the token from logs.
 
 **Authentication Flow:** Handles login/logout operations with JWT token management and proper session handling as defined in the "Successful Login", "Failed Login", and "Logout" scenarios.
 

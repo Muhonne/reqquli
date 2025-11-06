@@ -144,11 +144,11 @@ components:
           pattern: '^(UR|SR|TC)-\d+$'
         fromType:
           type: string
-          enum: [user, system, testcase]
+          enum: [user, system, testcase, testrun]
           description: Type of the from requirement
         toType:
           type: string
-          enum: [user, system, testcase]
+          enum: [user, system, testcase, testrun]
           description: Type of the to requirement
 
     CreateTraceResponse:
@@ -185,10 +185,10 @@ components:
           description: ID of the requirement that traces to
         fromType:
           type: string
-          enum: [user, system, testcase]
+          enum: [user, system, testcase, testrun]
         toType:
           type: string
-          enum: [user, system, testcase]
+          enum: [user, system, testcase, testrun]
         createdAt:
           type: string
           format: date-time
@@ -213,7 +213,7 @@ components:
           enum: [draft, approved]
         type:
           type: string
-          enum: [user, system, testcase]
+          enum: [user, system, testcase, testrun]
 
     requirementTracesResponse:
       type: object
