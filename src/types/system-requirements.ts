@@ -27,16 +27,12 @@ export type { TraceRelationship };
 export interface SystemRequirementListResponse {
   success: boolean;
   data: SystemRequirement[];
-  pagination?: {
-    total: number;
-    page: number;
-    pages: number;
-  };
   meta?: {
     pagination: {
       total: number;
       page: number;
       pages: number;
+      limit: number;
     };
   };
 }

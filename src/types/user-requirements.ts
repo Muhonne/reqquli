@@ -24,16 +24,12 @@ export interface UserRequirement {
 export interface UserRequirementListResponse {
   success: boolean;
   data: UserRequirement[];
-  pagination?: {
-    total: number;
-    page: number;
-    pages: number;
-  };
   meta?: {
     pagination: {
       total: number;
       page: number;
       pages: number;
+      limit: number;
     };
   };
 }

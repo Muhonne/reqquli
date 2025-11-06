@@ -51,16 +51,17 @@ Reqquli delivers comprehensive requirements lifecycle management with full trace
 
 **Features implemented:**
 
-All implemented features are documented in feature-specific Gherkin specifications in [`docs/spec/gherks/`](docs/spec/gherks/):
-- Authentication: `docs/spec/gherks/authentication.md`
-- User Requirements: `docs/spec/gherks/user-requirements.md`
-- System Requirements: `docs/spec/gherks/system-requirements.md`
-- Traceability: `docs/spec/gherks/trace_editing.md`
-- Manual Test Runs: `docs/spec/gherks/manual-test-runs.md`
+All implemented features are documented in feature-specific Gherkin specifications in [`docs/spec/`](docs/spec/):
+- Authentication: `docs/spec/authentication.md`
+- User Requirements: `docs/spec/user-requirements.md`
+- System Requirements: `docs/spec/system-requirements.md`
+- Traceability: `docs/spec/trace_editing.md`
+- Manual Test Runs: `docs/spec/manual-test-runs.md`
+- Audit Logging: `docs/spec/audit.md`
 
 ### Not and not-to-be implemented
 
-- Comprehensive audit logging (only basic createdBy/modifiedBy tracking)
+- Comprehensive audit logging UI/frontend (audit logging backend is implemented with database triggers and API endpoints, but no frontend interface exists)
 - Role-based access control (RBAC) not implemented
 - Export/import functionality not implemented
 - Real-time collaboration features not implemented
