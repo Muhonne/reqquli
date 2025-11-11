@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  RiskList,
+  ItemList,
   RiskForm,
   RequirementsListControls
 } from '../organisms';
@@ -92,14 +92,17 @@ export function RisksPage() {
   }, [filters, setFilters, fetchRisks]);
 
   const leftPanel = useMemo(() => (
-    <RiskList
-      risks={risks}
-      onSelectRisk={handleSelectRisk}
+    <ItemList<RiskRecord>
+      items={risks}
+      onSelectItem={handleSelectRisk}
       onCreateNew={handleCreateNew}
       loading={loading ?? false}
       selectedId={id || null}
-      sortBy={filters?.sort}
+      sortBy={filters?.sort === 'lastModified' ? 'lastModified' : 
+              filters?.sort === 'createdAt' ? 'createdAt' : 
+              'lastModified'}
       title="Risk Management"
+      itemType="risk"
       totalCount={pagination?.total}
       filters={
         <RequirementsListControls

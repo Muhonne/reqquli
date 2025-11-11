@@ -8,7 +8,7 @@ import { RequirementsListControls } from '../organisms/RequirementsListControls'
 import useTestRunStore from '../../stores/testRunStore';
 import { TestCase } from '../../../types/test-runs';
 
-type ViewMode = 'none' | 'detail' | 'create';
+type ViewMode = 'none' | 'detail' | 'create' | 'edit';
 
 export function TestCasesPage() {
   const { id } = useParams<{ id: string }>();

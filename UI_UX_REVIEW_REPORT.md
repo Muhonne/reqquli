@@ -29,21 +29,17 @@ All pages use `RequirementsListControls` for:
 - Pagination controls
 - Loading states
 
-### 3. **Error Handling Pattern** (⚠️ Mostly Consistent)
-Most pages follow the same pattern:
+### 3. **Error Handling Pattern** (✅ Consistent)
+All pages follow the same pattern:
 - Error state displayed in right panel
 - "Try again" button with `clearError` action
 - Uses `Stack` component for centered error display
 
-**Exception:** Test Runs page uses a floating error notification instead of right panel.
-
-### 4. **View Mode Management** (⚠️ Mostly Consistent)
-Most pages use the same `ViewMode` type:
+### 4. **View Mode Management** (✅ Consistent)
+All pages use the same `ViewMode` type:
 ```typescript
 type ViewMode = 'none' | 'detail' | 'create' | 'edit';
 ```
-
-**Exception:** Test Cases page only has `'none' | 'detail' | 'create'` (no 'edit' mode).
 
 ### 5. **URL Parameter Handling** (✅ Consistent)
 All pages handle URL parameters similarly:
@@ -65,8 +61,8 @@ Most pages show empty state when no items found:
 ### 1. **List Component Duplication** (🔴 Critical)
 
 **Issue:** Three different list components exist for similar functionality:
-- `RequirementList` - Used by User Requirements, System Requirements, Test Cases
-- `RiskList` - Separate component for Risks (duplicates RequirementList logic)
+- `ItemList` - Used by User Requirements, System Requirements, Test Cases (generic, supports multiple entity types)
+- `RiskList` - Separate component for Risks (duplicates ItemList logic)
 - `TestRunList` - Separate component for Test Runs (different structure)
 
 **Impact:**
@@ -75,14 +71,13 @@ Most pages show empty state when no items found:
 - Different styling and behavior
 
 **Recommendation:**
-- Unify `RiskList` to use `RequirementList` with a `requirementType="risk"` prop
-- Refactor `TestRunList` to follow the same pattern as `RequirementList`
-- Create a generic `EntityList` component that can handle all entity types
+- Unify `RiskList` to use `ItemList` with appropriate item type
+- Refactor `TestRunList` to follow the same pattern as `ItemList`
+- `ItemList` already supports generic entity types via `ListableEntity` interface
 
 **Files Affected:**
-- `src/client/components/organisms/RiskList.tsx` (should be removed)
-- `src/client/components/organisms/TestRunList.tsx` (needs refactoring)
-- `src/client/components/organisms/RequirementList.tsx` (needs extension)
+- `src/client/components/organisms/RiskList.tsx` (should be removed, use ItemList instead)
+- `src/client/components/organisms/TestRunList.tsx` (needs refactoring to use ItemList pattern)
 
 ---
 
@@ -93,9 +88,7 @@ Most pages show empty state when no items found:
 **Differences:**
 1. **Create Flow:** Uses a modal (`Modal` component) instead of right panel
 2. **Right Panel:** Shows `TestRunDetail` component instead of a form
-3. **Left Panel Structure:** Has `PageHeader` directly in left panel, not inside list component
-4. **Error Display:** Floating notification instead of right panel error state
-5. **No Edit Mode:** Missing edit functionality entirely
+3. **No Edit Mode:** Missing edit functionality entirely
 
 **Comparison:**
 
@@ -103,93 +96,23 @@ Most pages show empty state when no items found:
 |---------|------------|----------------|
 | Create in right panel | ✅ | ❌ (uses modal) |
 | Detail view uses form | ✅ | ❌ (uses TestRunDetail) |
-| PageHeader in list component | ✅ | ❌ (in page directly) |
-| Error in right panel | ✅ | ❌ (floating div) |
+| PageHeader in list component | ✅ | ✅ (uses LeftPanel) |
+| Error in right panel | ✅ | ✅ (fixed) |
 | Edit mode | ✅ | ❌ (missing) |
 
 **Recommendation:**
 - Align Test Runs page with other pages:
   - Move create to right panel (remove modal)
   - Create `TestRunForm` component for detail view
-  - Move `PageHeader` into `TestRunList` component
-  - Use right panel for error display
   - Add edit mode support
 
 **Files Affected:**
-- `src/client/components/pages/TestRunsPage.tsx` (major refactoring needed)
-- `src/client/components/organisms/TestRunList.tsx` (needs PageHeader integration)
+- `src/client/components/pages/TestRunsPage.tsx` (needs create/edit flow refactoring)
 - `src/client/components/organisms/TestRunDetail.tsx` (should become TestRunForm)
 
 ---
 
-### 3. **Data Transformation in Test Cases Page** (✅ Fixed)
-
-**Issue:** Test Cases page transforms data to match `RequirementList` format:
-```typescript
-const testCasesAsRequirements = useMemo(() => {
-  return testCases.map(tc => ({
-    id: tc.id,
-    identifier: tc.id,
-    title: tc.title,
-    // ... extensive mapping
-  }));
-}, [testCases]);
-```
-
-**Impact:**
-- Unnecessary complexity
-- Type safety issues (using `any` types)
-- Maintenance burden when TestCase type changes
-
-**Solution Implemented:**
-- ✅ Extended `RequirementList` to accept generic entity types via `ListableEntity` interface
-- ✅ Removed data transformation layer from `TestCasesPage`
-- ✅ Used proper TypeScript generics throughout
-- ✅ Removed `any` type usage
-
-**Files Modified:**
-- `src/client/components/pages/TestCasesPage.tsx` (removed transformation, now uses `TestCase` directly)
-- `src/client/components/organisms/RequirementList.tsx` (added `ListableEntity` interface and generic support)
-
----
-
-### 4. **Memoization Inconsistency** (✅ Fixed)
-
-**Issue:** User Requirements page memoizes controls, System Requirements doesn't:
-
-**User Requirements:**
-```typescript
-const memoizedControls = useMemo(() => (
-  <RequirementsListControls ... />
-), [dependencies]);
-```
-
-**System Requirements:**
-```typescript
-filters={
-  <RequirementsListControls ... />
-}
-```
-
-**Impact:**
-- Potential performance differences
-- Inconsistent code patterns
-
-**Solution Implemented:**
-- ✅ Memoized `RequirementsListControls` component with `React.memo` (high impact)
-- ✅ Removed redundant `useMemo` wrappers around controls JSX in pages
-- ✅ Fixed timer cleanup using `useRef` instead of state
-- ✅ Standardized pattern: component-level memoization handles optimization
-
-**Files Modified:**
-- `src/client/components/organisms/RequirementsListControls.tsx` (added `React.memo`, fixed timer cleanup)
-- `src/client/components/pages/UserRequirementsPage.tsx` (removed `memoizedControls` useMemo)
-- `src/client/components/pages/TestCasesPage.tsx` (removed `memoizedControls` useMemo)
-- `src/client/components/pages/TestRunsPage.tsx` (removed `memoizedControls` useMemo)
-
----
-
-### 5. **Sort Options Mapping** (🟡 Medium)
+### 3. **Sort Options Mapping** (🟡 Medium)
 
 **Issue:** Different pages handle sort options differently:
 
@@ -220,7 +143,7 @@ const sortMap = {
 
 ---
 
-### 6. **Status Options Customization** (🟢 Low)
+### 4. **Status Options Customization** (🟢 Low)
 
 **Issue:** Status options are passed differently:
 - Risks and Test Runs: Pass `statusOptions` prop
@@ -236,7 +159,7 @@ const sortMap = {
 
 ---
 
-### 7. **Search Placeholder Customization** (🟢 Low)
+### 5. **Search Placeholder Customization** (🟢 Low)
 
 **Issue:** Some pages customize search placeholder, others don't:
 - Risks: `searchPlaceholder="Search risks..."`
@@ -249,41 +172,6 @@ const sortMap = {
 
 ---
 
-### 8. **Left Panel Styling** (✅ Fixed)
-
-**Issue:** Different approaches to left panel styling:
-
-**RequirementList/RiskList:**
-```typescript
-style={{ boxShadow: 'inset -2px 0 4px 0 rgba(0,0,0,0.1), ...' }}
-```
-
-**TestRunsPage (directly in page):**
-```typescript
-style={{ boxShadow: 'inset -2px 0 4px 0 rgba(0,0,0,0.1), ...' }}
-```
-
-**Impact:**
-- Duplicated styling code
-- Hard to maintain consistent look
-
-**Solution Implemented:**
-- ✅ Created shared `LeftPanel` component with consistent styling
-- ✅ Updated `ItemList`, `RiskList`, and `TestRunsPage` to use `LeftPanel`
-- ✅ Removed redundant wrapper divs from pages
-- ✅ Only list item contents vary by type (as intended)
-
-**Files Modified:**
-- `src/client/components/organisms/LeftPanel.tsx` (new shared component)
-- `src/client/components/organisms/ItemList.tsx` (uses LeftPanel)
-- `src/client/components/organisms/RiskList.tsx` (uses LeftPanel)
-- `src/client/components/pages/TestRunsPage.tsx` (uses LeftPanel)
-- `src/client/components/pages/UserRequirementsPage.tsx` (removed redundant wrapper)
-- `src/client/components/pages/SystemRequirementsPage.tsx` (removed redundant wrapper)
-- `src/client/components/pages/TestCasesPage.tsx` (removed redundant wrapper)
-- `src/client/components/pages/RisksPage.tsx` (removed redundant wrapper)
-
----
 
 ## 📊 Component Usage Matrix
 
@@ -292,16 +180,15 @@ style={{ boxShadow: 'inset -2px 0 4px 0 rgba(0,0,0,0.1), ...' }}
 | `AppLayout` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `SplitPanelLayout` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `RequirementsListControls` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `RequirementList` | ✅ | ✅ | ❌ | ✅ | ❌ |
+| `ItemList` | ✅ | ✅ | ❌ | ✅ | ❌ |
 | `RiskList` | ❌ | ❌ | ✅ | ❌ | ❌ |
 | `TestRunList` | ❌ | ❌ | ❌ | ❌ | ✅ |
 | `RequirementForm` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | `RiskForm` | ❌ | ❌ | ✅ | ❌ | ❌ |
 | `TestCaseForm` | ❌ | ❌ | ❌ | ✅ | ❌ |
 | `TestRunDetail` | ❌ | ❌ | ❌ | ❌ | ✅ |
-| `PageHeader` (in list) | ✅ | ✅ | ✅ | ✅ | ❌ |
-| `PageHeader` (in page) | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Error in right panel | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `PageHeader` (in list) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Error in right panel | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Create in right panel | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Edit mode | ✅ | ✅ | ✅ | ❌ | ❌ |
 
@@ -311,41 +198,26 @@ style={{ boxShadow: 'inset -2px 0 4px 0 rgba(0,0,0,0.1), ...' }}
 
 ### Priority 1 (Critical - Breaks Consistency)
 1. **Unify List Components**
-   - Remove `RiskList`, extend `RequirementList` to support risks
-   - Refactor `TestRunList` to follow `RequirementList` pattern
-   - Create generic `EntityList<T>` component
+   - Remove `RiskList`, use `ItemList` for risks (already supports generic entities)
+   - Refactor `TestRunList` to follow `ItemList` pattern
+   - `ItemList` already provides generic `ListableEntity<T>` support
 
 2. **Align Test Runs Page**
    - Move create to right panel (remove modal)
    - Replace `TestRunDetail` with `TestRunForm`
-   - Move `PageHeader` into list component
-   - Use right panel for errors
    - Add edit mode
 
 ### Priority 2 (High - Affects Maintainability)
-3. **Remove Data Transformation**
-   - Extend `RequirementList` with proper generics
-   - Remove transformation in Test Cases page
-
-4. **Standardize Memoization**
-   - Decide on memoization strategy
-   - Apply consistently across all pages
-
-### Priority 3 (Medium - Code Quality)
-5. **Standardize Sort Handling**
+3. **Standardize Sort Handling**
    - Create shared sort mapping utility
    - Document sort options per entity type
 
-6. **Consolidate Styling**
-   - Move left panel styling to shared location
-   - Use CSS classes instead of inline styles
-
-### Priority 4 (Low - Polish)
-7. **Standardize Status Options**
+### Priority 3 (Medium - Code Quality)
+4. **Standardize Status Options**
    - Ensure all pages pass explicit status options
    - Document valid statuses per entity
 
-8. **Standardize Search Placeholders**
+5. **Standardize Search Placeholders**
    - Either all customize or use defaults consistently
 
 ---
@@ -354,23 +226,15 @@ style={{ boxShadow: 'inset -2px 0 4px 0 rgba(0,0,0,0.1), ...' }}
 
 ### For List Component Unification:
 
-1. **Extend RequirementList to support risks:**
-   ```typescript
-   requirementType: 'user' | 'system' | 'test' | 'risk'
-   ```
+1. **ItemList already supports generic entities:**
+   - `ItemList` uses `ListableEntity` interface for type safety
+   - Supports `itemType` prop: 'user' | 'system' | 'test'
+   - Can be extended to support 'risk' type
 
-2. **Create generic EntityList:**
-   ```typescript
-   interface EntityListProps<T> {
-     entities: T[];
-     entityType: string;
-     // ... other props
-   }
-   ```
-
-3. **Update RiskList usage:**
-   - Change `RiskList` to `RequirementList` with `requirementType="risk"`
-   - Map RiskRecord fields to RequirementList expected format if needed
+2. **Update RiskList usage:**
+   - Replace `RiskList` with `ItemList<RiskRecord>`
+   - Ensure `RiskRecord` implements `ListableEntity` interface
+   - Update `itemType` prop to include 'risk' option
 
 ### For Test Runs Page Alignment:
 
@@ -380,26 +244,23 @@ style={{ boxShadow: 'inset -2px 0 4px 0 rgba(0,0,0,0.1), ...' }}
    - Uses right panel instead of modal
 
 2. **Refactor TestRunList:**
-   - Add PageHeader inside component
-   - Follow same structure as RequirementList
-   - Use same styling
+   - Use `ItemList` component or follow same structure
+   - Use `LeftPanel` component for consistent styling
+   - Ensure `TestRun` implements `ListableEntity` interface if using `ItemList`
 
 3. **Update TestRunsPage:**
    - Remove modal
    - Use right panel for create/edit
    - Add edit mode support
-   - Use right panel for errors
 
 ---
 
 ## ✅ Conclusion
 
-While the pages share significant functionality (layout, controls, error handling), there are critical deviations that break consistency:
+While the pages share significant functionality (layout, controls, error handling, left panel structure), there are critical deviations that break consistency:
 
 1. **Three different list components** instead of one unified component
 2. **Test Runs page** uses fundamentally different patterns (modal, different detail view)
-3. **Data transformation** needed in Test Cases page
-4. **Inconsistent memoization** patterns
 
 **Recommended Action:** Prioritize unifying list components and aligning Test Runs page structure to match other pages. This will significantly improve maintainability and user experience consistency.
 

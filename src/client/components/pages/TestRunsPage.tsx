@@ -2,15 +2,14 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout } from '../templates/AppLayout';
 import { SplitPanelLayout } from '../templates/SplitPanelLayout';
-import { TestRunList } from '../organisms/TestRunList';
+import { ItemList } from '../organisms/ItemList';
 import { TestRunDetail } from '../organisms/TestRunDetail';
 import { TestRunForm } from '../organisms/TestRunForm';
 import { RequirementsListControls } from '../organisms/RequirementsListControls';
-import { LeftPanel } from '../organisms/LeftPanel';
 import { Modal } from '../molecules/Modal';
 import { Button, Text, Stack } from '../atoms';
 import useTestRunStore from '../../stores/testRunStore';
-import { TestRunStatus } from '../../../types/test-runs';
+import { TestRunStatus, TestRun } from '../../../types/test-runs';
 
 export const TestRunsPage: React.FC = () => {
   const { runId } = useParams<{ runId: string }>();
@@ -115,12 +114,16 @@ export const TestRunsPage: React.FC = () => {
     <AppLayout>
       <SplitPanelLayout
         leftPanel={
-          <LeftPanel
-            title="Test Runs"
-            count={testRunPagination?.total}
+          <ItemList<TestRun>
+            items={testRuns}
+            onSelectItem={handleSelectTestRun}
             onCreateNew={() => setShowCreateModal(true)}
-            createButtonText="New"
-            headerTestId="create-test-run-btn"
+            loading={loading}
+            selectedId={runId || null}
+            sortBy={testRunFilters.sort === 'lastModified' ? 'lastModified' : 'createdAt'}
+            title="Test Runs"
+            itemType="testrun"
+            totalCount={testRunPagination?.total}
             filters={
               <RequirementsListControls
                 search={testRunFilters.search}
@@ -144,15 +147,7 @@ export const TestRunsPage: React.FC = () => {
                 ]}
               />
             }
-            ariaLabel="Test runs list"
-          >
-            <TestRunList
-              testRuns={testRuns}
-              selectedTestRun={currentTestRun}
-              onSelectTestRun={handleSelectTestRun}
-              loading={loading}
-            />
-          </LeftPanel>
+          />
         }
         rightPanel={rightPanel}
       />
