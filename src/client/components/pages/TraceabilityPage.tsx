@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../templates';
-import { Spinner, Text } from '../atoms';
+import { Spinner, Text, Button, Stack } from '../atoms';
 import { tracesApi } from '../../services/api';
 import * as d3 from 'd3';
 
@@ -451,11 +451,20 @@ export function TraceabilityPage() {
   if (error) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <Text color="secondary">{error}</Text>
-          </div>
-        </div>
+        <Stack align="center" justify="center" className="h-full">
+          <Stack align="center" spacing="md">
+            <Text className="text-red-600">Error: {error}</Text>
+            <Button 
+              onClick={() => {
+                setError(null);
+                fetchTraces();
+              }}
+              variant="secondary"
+            >
+              Try again
+            </Button>
+          </Stack>
+        </Stack>
       </AppLayout>
     );
   }

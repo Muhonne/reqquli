@@ -8,6 +8,7 @@ import { TestRunForm } from '../organisms/TestRunForm';
 import { RequirementsListControls } from '../organisms/RequirementsListControls';
 import { PageHeader } from '../molecules/PageHeader';
 import { Modal } from '../molecules/Modal';
+import { Button, Text, Stack } from '../atoms';
 import useTestRunStore from '../../stores/testRunStore';
 import { TestRunStatus } from '../../../types/test-runs';
 
@@ -115,6 +116,37 @@ export const TestRunsPage: React.FC = () => {
     loading
   ]);
 
+  const rightPanel = useMemo(() => {
+    if (error) {
+      return (
+        <Stack align="center" justify="center" className="h-full">
+          <Stack align="center" spacing="md">
+            <Text className="text-red-600">Error: {error}</Text>
+            <Button 
+              onClick={clearError}
+              variant="secondary"
+            >
+              Try again
+            </Button>
+          </Stack>
+        </Stack>
+      );
+    }
+
+    if (runId && currentTestRun) {
+      return <TestRunDetail testRun={currentTestRun} />;
+    }
+
+    return (
+      <div className="flex items-center justify-center h-full text-gray-500">
+        <div className="text-center">
+          <h2 className="text-lg font-medium mb-2">Test Runs</h2>
+          <p>Select a test run from the list to view details, or create a new one.</p>
+        </div>
+      </div>
+    );
+  }, [error, clearError, runId, currentTestRun]);
+
   return (
     <AppLayout>
       <SplitPanelLayout
@@ -142,15 +174,7 @@ export const TestRunsPage: React.FC = () => {
             </div>
           </div>
         }
-        rightPanel={
-          runId && currentTestRun ? (
-            <TestRunDetail testRun={currentTestRun} />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              Select a test run to view details
-            </div>
-          )
-        }
+        rightPanel={rightPanel}
       />
 
       <Modal
@@ -164,18 +188,6 @@ export const TestRunsPage: React.FC = () => {
           onCancel={() => setShowCreateModal(false)}
         />
       </Modal>
-
-      {error && (
-        <div className="fixed bottom-4 right-4 bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded">
-          {error}
-          <button
-            onClick={clearError}
-            className="ml-2 text-red-700 hover:text-red-800"
-          >
-            ×
-          </button>
-        </div>
-      )}
     </AppLayout>
   );
 };
