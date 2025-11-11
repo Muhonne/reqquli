@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Trash2, GripVertical, Trash } from 'lucide-react';
+import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { Button, Input, Textarea, Badge, Text, MonoText, Heading, Stack } from '../atoms';
 import { FormField, MetadataSection, PasswordConfirmModal, Modal, TestCaseTraceEditModal, TraceLinksSection, TestResultLink } from '../molecules';
 import useTestRunStore from '../../stores/testRunStore';
@@ -462,65 +462,6 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
                 />
               </FormField>
 
-              {/* Traces Section */}
-              <div className="space-y-4">
-                {/* Upstream Traces Section - System Requirements */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Heading level={2} className="text-base font-medium">
-                      Traces from System Requirements
-                    </Heading>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setShowTraceEditModal(true)}
-                      disabled={loading}
-                      data-testid="testcase-edit-traces"
-                    >
-                      Edit Traces
-                    </Button>
-                  </div>
-                  <TraceLinksSection
-                    title=""
-                    links={upstreamTraces}
-                    type="system"
-                    loading={loadingTraces}
-                  />
-                </div>
-
-                {/* Test Results Section - Automatically generated from approved test runs */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Heading level={2} className="text-base font-medium">
-                      Test Execution Results
-                    </Heading>
-                    <Text variant="small" color="muted">
-                      Generated from approved test runs
-                    </Text>
-                  </div>
-                  {downstreamTraces.filter(t => t.type === 'testresult').length > 0 ? (
-                    <div className="w-full border border-gray-300 bg-white px-3 py-2">
-                      <div className="space-y-0.5">
-                        {downstreamTraces.filter(t => t.type === 'testresult').map((result: any) => (
-                          <TestResultLink
-                            key={result.id}
-                            id={result.id}
-                            testRunId={result.testRunId}
-                            testRunName={result.title || result.testRunName}
-                            description={result.description}
-                            result={result.result || 'pass'}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 italic">
-                      No test results yet. Results will appear here after test runs are approved.
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Test Steps */}
               <FormField label="Test Steps">
                 {existingSteps.length === 0 ? (
@@ -583,7 +524,6 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
                       className="h-10 text-red-700 hover:text-red-800"
                       testid="test-case-delete"
                     >
-                      <Trash className="w-4 h-4 mr-2" />
                       Delete
                     </Button>
                   )}
@@ -596,9 +536,69 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
                       onClick={() => setShowApprovalModal(true)}
                       disabled={loading}
                       className="h-10"
+                      testid="test-case-approve"
                     >
                       Approve
                     </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Traces Section */}
+              <div className="space-y-4">
+                {/* Upstream Traces Section - System Requirements */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Heading level={2} className="text-base font-medium">
+                      Traces from System Requirements
+                    </Heading>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowTraceEditModal(true)}
+                      disabled={loading}
+                      data-testid="testcase-edit-traces"
+                    >
+                      Edit Traces
+                    </Button>
+                  </div>
+                  <TraceLinksSection
+                    title=""
+                    links={upstreamTraces}
+                    type="system"
+                    loading={loadingTraces}
+                  />
+                </div>
+
+                {/* Test Results Section - Automatically generated from approved test runs */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Heading level={2} className="text-base font-medium">
+                      Test Execution Results
+                    </Heading>
+                    <Text variant="small" color="muted">
+                      Generated from approved test runs
+                    </Text>
+                  </div>
+                  {downstreamTraces.filter(t => t.type === 'testresult').length > 0 ? (
+                    <div className="w-full border border-gray-300 bg-white px-3 py-2">
+                      <div className="space-y-0.5">
+                        {downstreamTraces.filter(t => t.type === 'testresult').map((result: any) => (
+                          <TestResultLink
+                            key={result.id}
+                            id={result.id}
+                            testRunId={result.testRunId}
+                            testRunName={result.title || result.testRunName}
+                            description={result.description}
+                            result={result.result || 'pass'}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 italic">
+                      No test results yet. Results will appear here after test runs are approved.
+                    </div>
                   )}
                 </div>
               </div>

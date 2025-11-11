@@ -484,6 +484,51 @@ export function RiskForm({ isCreateMode = false }: RiskFormProps) {
           />
         </FormField>
 
+        {!isCreateMode && risk && !isEditing && (
+          <div className="flex justify-between items-center">
+            <div className="flex gap-2">
+              {canEdit && (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={handleEdit}
+                  disabled={!!loading}
+                  className="h-10"
+                  testid="risk-edit"
+                >
+                  Edit
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={handleDelete}
+                  disabled={!!loading}
+                  className="h-10 text-red-700 hover:text-red-800"
+                  testid="risk-delete"
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+            <div>
+              {canApprove && (
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => setShowApprovalForm(true)}
+                  disabled={!!loading}
+                  className="h-10"
+                  testid="risk-approve"
+                >
+                  Approve
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         {!isCreateMode && risk && (
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -501,61 +546,6 @@ export function RiskForm({ isCreateMode = false }: RiskFormProps) {
 
         {!isCreateMode && risk && !isEditing && (
           <>
-            <div className="flex justify-between items-center">
-              <div className="flex gap-2">
-                {canEdit && (
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    onClick={handleEdit}
-                    disabled={!!loading}
-                    className="h-10"
-                    testid="risk-edit"
-                  >
-                    Edit
-                  </Button>
-                )}
-                {canDelete && (
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    onClick={handleDelete}
-                    disabled={!!loading}
-                    className="h-10 text-red-700 hover:text-red-800"
-                    testid="risk-delete"
-                  >
-                    Delete
-                  </Button>
-                )}
-              </div>
-              <div>
-                {canApprove && (
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={() => setShowApprovalForm(true)}
-                    disabled={!!loading}
-                    className="h-10"
-                    testid="risk-approve"
-                  >
-                    Approve
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <MetadataSection
-              fields={[
-                { label: 'Created', value: risk.createdAt, type: 'date' },
-                { label: 'Created By', value: risk.createdByName || 'Unknown' },
-                { label: 'Modified', value: risk.lastModified, type: 'date' },
-                { label: 'Modified By', value: risk.modifiedByName },
-                { label: 'Approved', value: risk.approvedAt, type: 'date' },
-                { label: 'Approved By', value: risk.approvedByName },
-                { label: 'Approval Notes', value: risk.approvalNotes }
-              ]}
-            />
-
             {/* Traces Section */}
             <div className="space-y-4">
               {/* Downstream Traces Section - Risks trace to System Requirements */}
@@ -586,6 +576,18 @@ export function RiskForm({ isCreateMode = false }: RiskFormProps) {
                 />
               </div>
             </div>
+
+            <MetadataSection
+              fields={[
+                { label: 'Created', value: risk.createdAt, type: 'date' },
+                { label: 'Created By', value: risk.createdByName || 'Unknown' },
+                { label: 'Modified', value: risk.lastModified, type: 'date' },
+                { label: 'Modified By', value: risk.modifiedByName },
+                { label: 'Approved', value: risk.approvedAt, type: 'date' },
+                { label: 'Approved By', value: risk.approvedByName },
+                { label: 'Approval Notes', value: risk.approvalNotes }
+              ]}
+            />
           </>
         )}
 
