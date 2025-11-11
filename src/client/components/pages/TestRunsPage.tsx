@@ -79,42 +79,6 @@ export const TestRunsPage: React.FC = () => {
     setTestRunFilters({ sort: sortMap[sort] as 'createdAt' | 'lastModified', order, page: 1 });
   }, [setTestRunFilters]);
 
-  const memoizedControls = useMemo(() => (
-    <RequirementsListControls
-      search={testRunFilters.search}
-      status={testRunFilters.status as any}
-      totalCount={testRunPagination?.total || 0}
-      onSearchChange={handleSearchChange}
-      onStatusChange={handleStatusChange as any}
-      sortBy={testRunFilters.sort === 'lastModified' ? 'lastModified' : 'createdAt'}
-      sortOrder={testRunFilters.order}
-      onSortChange={handleSortChange}
-      currentPage={testRunPagination?.page || 1}
-      totalPages={testRunPagination?.pages || 1}
-      onPageChange={handlePageChange}
-      loading={loading}
-      statusOptions={[
-        { value: undefined, label: 'All' },
-        { value: 'not_started', label: 'Not Started' },
-        { value: 'in_progress', label: 'In Progress' },
-        { value: 'complete', label: 'Complete' },
-        { value: 'approved', label: 'Approved' }
-      ]}
-    />
-  ), [
-    testRunFilters.search,
-    testRunFilters.status,
-    testRunFilters.sort,
-    testRunFilters.order,
-    testRunPagination?.total,
-    testRunPagination?.page,
-    testRunPagination?.pages,
-    handleSearchChange,
-    handleStatusChange,
-    handleSortChange,
-    handlePageChange,
-    loading
-  ]);
 
   const rightPanel = useMemo(() => {
     if (error) {
@@ -162,7 +126,27 @@ export const TestRunsPage: React.FC = () => {
               />
             </div>
 
-            {memoizedControls}
+            <RequirementsListControls
+              search={testRunFilters.search}
+              status={testRunFilters.status as any}
+              totalCount={testRunPagination?.total || 0}
+              onSearchChange={handleSearchChange}
+              onStatusChange={handleStatusChange as any}
+              sortBy={testRunFilters.sort === 'lastModified' ? 'lastModified' : 'createdAt'}
+              sortOrder={testRunFilters.order}
+              onSortChange={handleSortChange}
+              currentPage={testRunPagination?.page || 1}
+              totalPages={testRunPagination?.pages || 1}
+              onPageChange={handlePageChange}
+              loading={loading}
+              statusOptions={[
+                { value: undefined, label: 'All' },
+                { value: 'not_started', label: 'Not Started' },
+                { value: 'in_progress', label: 'In Progress' },
+                { value: 'complete', label: 'Complete' },
+                { value: 'approved', label: 'Approved' }
+              ]}
+            />
 
             <div className="flex-1 overflow-y-auto">
               <TestRunList

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { Search, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react';
 import { Input, Select, Button } from '../atoms';
 
@@ -31,7 +31,7 @@ interface RequirementsListControlsProps {
   searchPlaceholder?: string;
 }
 
-export function RequirementsListControls({
+function RequirementsListControlsComponent({
   search = '',
   status,
   totalCount: _totalCount,
@@ -52,7 +52,7 @@ export function RequirementsListControls({
   searchPlaceholder = 'Search requirements...'
 }: RequirementsListControlsProps) {
   const [searchTerm, setSearchTerm] = useState(search);
-  const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update local state when props change
   useEffect(() => {
@@ -63,17 +63,24 @@ export function RequirementsListControls({
     setSearchTerm(value);
     
     // Clear existing timer
-    if (searchTimer) {
-      clearTimeout(searchTimer);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
     }
     
     // Set new timer for debounced search
-    const newTimer = setTimeout(() => {
+    searchTimerRef.current = setTimeout(() => {
       onSearchChange(value.trim() || undefined);
     }, 300);
-    
-    setSearchTimer(newTimer);
-  }, [onSearchChange, searchTimer]);
+  }, [onSearchChange]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleStatusCycle = () => {
     // Cycle through status options
@@ -197,3 +204,5 @@ export function RequirementsListControls({
     </div>
   );
 }
+
+export const RequirementsListControls = memo(RequirementsListControlsComponent);

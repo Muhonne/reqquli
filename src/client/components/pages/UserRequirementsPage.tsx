@@ -88,36 +88,6 @@ export function UserRequirementsPage() {
 
 
 
-  const memoizedControls = useMemo(() => (
-    <RequirementsListControls
-      search={filters?.search}
-      status={filters?.status}
-      totalCount={pagination?.total || 0}
-      onSearchChange={handleSearchChange}
-      onStatusChange={handleStatusChange}
-      sortBy={filters?.sort}
-      sortOrder={filters?.order}
-      onSortChange={handleSortChange}
-      currentPage={pagination?.page || 1}
-      totalPages={pagination?.pages || 1}
-      onPageChange={handlePageChange}
-      loading={loading}
-    />
-  ), [
-    filters?.search,
-    filters?.status,
-    filters?.sort,
-    filters?.order,
-    pagination?.total,
-    pagination?.page,
-    pagination?.pages,
-    handleSearchChange,
-    handleStatusChange,
-    handleSortChange,
-    handlePageChange,
-    loading
-  ]);
-
   const leftPanel = useMemo(() => (
     <div className="flex flex-col h-full">
       <ItemList
@@ -130,7 +100,22 @@ export function UserRequirementsPage() {
         title="User Requirements"
         itemType="user"
         totalCount={pagination?.total}
-        filters={memoizedControls}
+        filters={
+          <RequirementsListControls
+            search={filters?.search}
+            status={filters?.status}
+            totalCount={pagination?.total || 0}
+            onSearchChange={handleSearchChange}
+            onStatusChange={handleStatusChange}
+            sortBy={filters?.sort}
+            sortOrder={filters?.order}
+            onSortChange={handleSortChange}
+            currentPage={pagination?.page || 1}
+            totalPages={pagination?.pages || 1}
+            onPageChange={handlePageChange}
+            loading={loading}
+          />
+        }
       />
     </div>
   ), [
@@ -140,8 +125,16 @@ export function UserRequirementsPage() {
     loading,
     id,
     filters?.sort,
+    filters?.search,
+    filters?.status,
+    filters?.order,
     pagination?.total,
-    memoizedControls
+    pagination?.page,
+    pagination?.pages,
+    handleSearchChange,
+    handleStatusChange,
+    handleSortChange,
+    handlePageChange
   ]);
 
   const rightPanel = useMemo(() => {
