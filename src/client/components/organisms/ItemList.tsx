@@ -3,25 +3,33 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, Clock, ChevronRight, FileText } from 'lucide-react';
 import { ListItemStyle } from '../atoms';
 import { EmptyState, LoadingState, PageHeader } from '../molecules';
-import { UserRequirement } from '../../../types/user-requirements';
-import { SystemRequirement } from '../../../types/system-requirements';
 
-type Requirement = UserRequirement | SystemRequirement;
+// Base interface that all listable entities must implement
+export interface ListableEntity {
+  id: string;
+  title: string;
+  description: string;
+  status: 'draft' | 'approved';
+  revision: number;
+  createdAt: string;
+  lastModified?: string;
+  approvedAt?: string;
+}
 
-// Memoized requirement item to prevent re-renders when selection changes
-interface RequirementItemProps {
-  requirement: Requirement;
+// Memoized list item to prevent re-renders when selection changes
+interface ListItemProps {
+  item: ListableEntity;
   isActive: boolean;
   linkPath: string;
   isUserRequirement: boolean;
   isTestRequirement: boolean;
-  onSelect?: (requirement: Requirement) => void;
+  onSelect?: (item: ListableEntity) => void;
   getDateLabel: () => string;
-  getDisplayDate: (requirement: Requirement) => string;
+  getDisplayDate: (item: ListableEntity) => string;
 }
 
-const RequirementItem = memo(({
-  requirement,
+const ListItem = memo(({
+  item,
   isActive,
   linkPath,
   isUserRequirement,
@@ -29,28 +37,28 @@ const RequirementItem = memo(({
   onSelect,
   getDateLabel,
   getDisplayDate
-}: RequirementItemProps) => {
+}: ListItemProps) => {
   const itemContent = (
     <div className="flex items-start justify-between">
       <div className="flex items-start gap-3 flex-1 min-w-0">
-        {requirement.status === 'approved' ? (
-          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-1" data-testid={`requirement-status-approved-${requirement.id}`} />
+        {item.status === 'approved' ? (
+          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-1" data-testid={`requirement-status-approved-${item.id}`} />
         ) : (
-          <Clock className="w-5 h-5 text-gray-400 flex-shrink-0 mt-1" data-testid={`requirement-status-draft-${requirement.id}`} />
+          <Clock className="w-5 h-5 text-gray-400 flex-shrink-0 mt-1" data-testid={`requirement-status-draft-${item.id}`} />
         )}
         <div className="flex-1 min-w-0">
           <div className="mb-2">
             <span className="font-semibold text-gray-900 text-sm">
-              {requirement.id}-{requirement.revision} {requirement.title}
+              {item.id}-{item.revision} {item.title}
             </span>
           </div>
 
           <p className="text-sm text-gray-600 line-clamp-2">
-            {requirement.description}
+            {item.description}
           </p>
 
           <div className="mt-2 text-xs text-gray-600">
-            {getDateLabel()}: {getDisplayDate(requirement)}
+            {getDateLabel()}: {getDisplayDate(item)}
           </div>
         </div>
       </div>
@@ -67,7 +75,7 @@ const RequirementItem = memo(({
         isActive={isActive}
         className={baseItemClassName}
         asChild
-        testid={`requirement-card-${requirement.id}`}
+        testid={`requirement-card-${item.id}`}
       >
         <Link to={linkPath}>
           {itemContent}
@@ -78,9 +86,9 @@ const RequirementItem = memo(({
     return (
       <ListItemStyle
         isActive={isActive}
-        onClick={() => onSelect?.(requirement)}
+        onClick={() => onSelect?.(item)}
         className={baseItemClassName}
-        testid={`requirement-card-${requirement.id}`}
+        testid={`requirement-card-${item.id}`}
       >
         {itemContent}
       </ListItemStyle>
@@ -88,31 +96,31 @@ const RequirementItem = memo(({
   }
 });
 
-interface RequirementListProps<T extends Requirement> {
-  requirements: T[];
-  onSelectRequirement?: (requirement: T) => void;
+interface ItemListProps<T extends ListableEntity> {
+  items: T[];
+  onSelectItem?: (item: T) => void;
   onCreateNew: () => void;
   loading?: boolean;
   selectedId?: string | null;
   sortBy?: 'lastModified' | 'createdAt' | 'approvedAt';
   title: string;
-  requirementType: 'user' | 'system' | 'test';
+  itemType: 'user' | 'system' | 'test';
   totalCount?: number;
   filters?: React.ReactNode;
 }
 
-function RequirementListComponent<T extends Requirement>({ 
-  requirements, 
-  onSelectRequirement, 
+function ItemListComponent<T extends ListableEntity>({ 
+  items, 
+  onSelectItem, 
   onCreateNew,
   loading = false,
   selectedId,
   sortBy = 'lastModified',
   title,
-  requirementType,
+  itemType,
   totalCount,
   filters
-}: RequirementListProps<T>) {
+}: ItemListProps<T>) {
   
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) {return 'N/A';}
@@ -126,15 +134,15 @@ function RequirementListComponent<T extends Requirement>({
     });
   };
 
-  const getDisplayDate = (requirement: T) => {
+  const getDisplayDate = (item: T) => {
     switch (sortBy) {
       case 'approvedAt':
-        return requirement.approvedAt ? formatDate(requirement.approvedAt) : 'Not approved';
+        return item.approvedAt ? formatDate(item.approvedAt) : 'Not approved';
       case 'createdAt':
-        return formatDate(requirement.createdAt);
+        return formatDate(item.createdAt);
       case 'lastModified':
       default:
-        return formatDate(requirement.lastModified || requirement.createdAt);
+        return formatDate(item.lastModified || item.createdAt);
     }
   };
 
@@ -150,31 +158,29 @@ function RequirementListComponent<T extends Requirement>({
     }
   };
 
-  const isUserRequirement = requirementType === 'user';
-  const isTestRequirement = requirementType === 'test';
+  const isUserRequirement = itemType === 'user';
+  const isTestRequirement = itemType === 'test';
 
-  const renderRequirementItem = (requirement: T) => {
+  const renderItem = (item: T) => {
     const linkPath = isUserRequirement
-      ? `/user-requirements/${requirement.id}`
+      ? `/user-requirements/${item.id}`
       : isTestRequirement
-      ? `/test-cases/${requirement.id}`
-      : `/system-requirements/${requirement.id}`;
+      ? `/test-cases/${item.id}`
+      : `/system-requirements/${item.id}`;
 
-    // Compare selectedId (URL format) with formatted requirement ID
-    const formattedRequirementId = requirement.id;
-    const isActive = selectedId === formattedRequirementId;
+    const isActive = selectedId === item.id;
 
     return (
-      <RequirementItem
-        key={requirement.id}
-        requirement={requirement}
+      <ListItem
+        key={item.id}
+        item={item}
         isActive={isActive}
         linkPath={linkPath}
         isUserRequirement={isUserRequirement}
         isTestRequirement={isTestRequirement}
-        onSelect={onSelectRequirement as ((requirement: Requirement) => void) | undefined}
+        onSelect={onSelectItem ? (item: ListableEntity) => onSelectItem(item as T) : undefined}
         getDateLabel={getDateLabel}
-        getDisplayDate={(req: Requirement) => getDisplayDate(req as T)}
+        getDisplayDate={(item: ListableEntity) => getDisplayDate(item as T)}
       />
     );
   };
@@ -186,30 +192,30 @@ function RequirementListComponent<T extends Requirement>({
           title={title}
           count={totalCount}
           onCreateNew={onCreateNew}
-          createButtonText={requirementType === 'system' ? 'New' : requirementType === 'test' ? 'New' : 'New'}
-          testId="requirements-create-new"
+          createButtonText="New"
+          testId="items-create-new"
         />
       </div>
       
       {filters && filters}
       
-      <div className="flex-1 overflow-auto" role="region" aria-label="Requirements list" tabIndex={0}>
+      <div className="flex-1 overflow-auto" role="region" aria-label="Items list" tabIndex={0}>
         {loading ? (
-          <LoadingState message="Loading requirements..." />
-        ) : requirements.length === 0 ? (
+          <LoadingState message="Loading items..." />
+        ) : items.length === 0 ? (
           <EmptyState
             icon={FileText}
-            title="No requirements found"
-            description="Get started by creating your first requirement."
+            title="No items found"
+            description="Get started by creating your first item."
             action={{
-              label: 'Create your first requirement',
+              label: 'Create your first item',
               onClick: onCreateNew
             }}
-            testid="requirements-empty-state"
+            testid="items-empty-state"
           />
         ) : (
           <div>
-            {requirements.map(renderRequirementItem)}
+            {items.map(renderItem)}
           </div>
         )}
       </div>
@@ -217,4 +223,5 @@ function RequirementListComponent<T extends Requirement>({
   );
 }
 
-export const RequirementList = memo(RequirementListComponent) as typeof RequirementListComponent;
+export const ItemList = memo(ItemListComponent) as typeof ItemListComponent;
+

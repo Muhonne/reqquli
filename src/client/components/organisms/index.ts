@@ -1,6 +1,7 @@
 export { Sidebar } from './Sidebar'
-export { RequirementList } from './RequirementList'
+export { ItemList } from './ItemList'
 export { RequirementsListControls } from './RequirementsListControls'
 export { RequirementForm } from './RequirementForm'
 export { RiskList } from './RiskList'
 export { RiskForm } from './RiskForm'
+export type { ListableEntity } from './ItemList'

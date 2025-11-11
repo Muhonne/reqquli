@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  RequirementList,
+  ItemList,
   RequirementForm,
   RequirementsListControls
 } from '../organisms';
@@ -90,15 +90,15 @@ export function SystemRequirementsPage() {
 
   const leftPanel = useMemo(() => (
     <div className="flex flex-col h-full">
-      <RequirementList
-        requirements={requirements || []}
-        onSelectRequirement={handleSelectRequirement}
+      <ItemList
+        items={requirements || []}
+        onSelectItem={handleSelectRequirement}
         onCreateNew={handleCreateNew}
         loading={loading}
         selectedId={id || null}
         sortBy={filters?.sort}
         title="System Requirements"
-        requirementType="system"
+        itemType="system"
         filters={
           <RequirementsListControls
             search={filters?.search}
