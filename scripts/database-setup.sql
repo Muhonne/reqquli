@@ -7,6 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Create sequences for requirement numbering
 CREATE SEQUENCE IF NOT EXISTS user_requirement_seq START WITH 1;
 CREATE SEQUENCE IF NOT EXISTS system_requirement_seq START WITH 1;
+CREATE SEQUENCE IF NOT EXISTS risk_requirement_seq START WITH 1;
 
 -- Users table
 CREATE TABLE users (
@@ -71,13 +72,61 @@ CREATE TABLE system_requirements (
     deleted_at TIMESTAMP WITH TIME ZONE
 );
 
+-- Risk Records
+CREATE TABLE risk_records (
+    id VARCHAR(20) PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    description TEXT NOT NULL,
+    hazard TEXT NOT NULL,
+    harm TEXT NOT NULL,
+    foreseeable_sequence TEXT,
+    severity INTEGER NOT NULL CHECK (severity >= 1 AND severity <= 5),
+    probability_p1 INTEGER NOT NULL CHECK (probability_p1 >= 1 AND probability_p1 <= 5),
+    probability_p2 INTEGER NOT NULL CHECK (probability_p2 >= 1 AND probability_p2 <= 5),
+    p_total_calculation_method TEXT NOT NULL,
+    p_total INTEGER NOT NULL CHECK (p_total >= 1 AND p_total <= 5),
+    residual_risk_score VARCHAR(10),
+    status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'approved')),
+    revision INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES users(id),
+    last_modified TIMESTAMP WITH TIME ZONE,
+    modified_by UUID REFERENCES users(id),
+    approved_at TIMESTAMP WITH TIME ZONE,
+    approved_by UUID REFERENCES users(id),
+    approval_notes TEXT,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Control Measures
+CREATE TABLE control_measures (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    risk_record_id VARCHAR(20) NOT NULL REFERENCES risk_records(id) ON DELETE CASCADE,
+    description TEXT NOT NULL,
+    control_type VARCHAR(20) NOT NULL CHECK (control_type IN ('design', 'protective', 'information')),
+    effectiveness TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES users(id)
+);
+
+-- Risk Acceptability Matrix
+CREATE TABLE risk_acceptability_matrix (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    severity INTEGER NOT NULL CHECK (severity >= 1 AND severity <= 5),
+    p_total INTEGER NOT NULL CHECK (p_total >= 1 AND p_total <= 5),
+    acceptability VARCHAR(20) NOT NULL CHECK (acceptability IN ('acceptable', 'unacceptable')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(severity, p_total)
+);
+
 -- Unified table for all trace relationships
 CREATE TABLE traces (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     from_requirement_id VARCHAR(20) NOT NULL,
     to_requirement_id VARCHAR(20) NOT NULL,
-    from_type VARCHAR(10) NOT NULL CHECK (from_type IN ('user', 'system', 'testcase', 'testresult')),
-    to_type VARCHAR(10) NOT NULL CHECK (to_type IN ('user', 'system', 'testcase', 'testresult')),
+    from_type VARCHAR(10) NOT NULL CHECK (from_type IN ('user', 'system', 'testcase', 'testresult', 'risk')),
+    to_type VARCHAR(10) NOT NULL CHECK (to_type IN ('user', 'system', 'testcase', 'testresult', 'risk')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by UUID REFERENCES users(id),
     is_system_generated BOOLEAN DEFAULT FALSE,
@@ -117,6 +166,16 @@ CREATE INDEX idx_user_requirements_created_by ON user_requirements(created_by);
 
 CREATE INDEX idx_system_requirements_status ON system_requirements(status) WHERE deleted_at IS NULL;
 CREATE INDEX idx_system_requirements_created_by ON system_requirements(created_by);
+
+-- Indexes for risk tables
+CREATE UNIQUE INDEX idx_risk_records_title_unique ON risk_records(LOWER(title)) WHERE deleted_at IS NULL;
+CREATE INDEX idx_risk_records_status ON risk_records(status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_risk_records_created_by ON risk_records(created_by);
+CREATE INDEX idx_risk_records_residual_score_status ON risk_records(residual_risk_score, status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_risk_records_deleted_status ON risk_records(deleted_at, status);
+CREATE INDEX idx_risk_records_active ON risk_records(deleted_at) WHERE deleted_at IS NULL;
+CREATE INDEX idx_control_measures_risk_record ON control_measures(risk_record_id);
+CREATE INDEX idx_risk_acceptability_matrix_severity_p_total ON risk_acceptability_matrix(severity, p_total);
 
 -- Indexes for traces table
 CREATE INDEX idx_traces_from ON traces(from_requirement_id, from_type);

@@ -4,15 +4,15 @@ export interface RequirementTrace {
   id: string;
   title: string;
   status: 'draft' | 'approved';
-  type: 'user' | 'system' | 'testcase' | 'testrun';
+  type: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
 }
 
 export interface TraceRelationship {
   id: string;
   fromId: string;
   toId: string;
-  fromType: 'user' | 'system' | 'testcase' | 'testrun';
-  toType: 'user' | 'system' | 'testcase' | 'testrun';
+  fromType: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
+  toType: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
   createdAt: string;
   createdBy: string;
   createdByName?: string;
@@ -32,8 +32,8 @@ export interface DownstreamTracesResponse {
 export interface CreateTraceRequest {
   fromId: string;
   toId: string;
-  fromType: 'user' | 'system' | 'testcase' | 'testrun';
-  toType: 'user' | 'system' | 'testcase' | 'testrun';
+  fromType: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
+  toType: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
 }
 
 export interface CreateTraceResponse {

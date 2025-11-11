@@ -31,22 +31,26 @@ router.get('/traces', authenticateToken, async (_req: Request, res: Response) =>
           WHEN t.from_type = 'user' THEN ur_from.title
           WHEN t.from_type = 'system' THEN sr_from.title
           WHEN t.from_type = 'testcase' THEN tc_from.title
+          WHEN t.from_type = 'risk' THEN rr_from.title
         END as "fromTitle",
         CASE
           WHEN t.from_type = 'user' THEN ur_from.status
           WHEN t.from_type = 'system' THEN sr_from.status
           WHEN t.from_type = 'testcase' THEN tc_from.status
+          WHEN t.from_type = 'risk' THEN rr_from.status
         END as "fromStatus",
         -- To requirement details
         CASE
           WHEN t.to_type = 'user' THEN ur_to.title
           WHEN t.to_type = 'system' THEN sr_to.title
           WHEN t.to_type = 'testcase' THEN tc_to.title
+          WHEN t.to_type = 'risk' THEN rr_to.title
         END as "toTitle",
         CASE
           WHEN t.to_type = 'user' THEN ur_to.status
           WHEN t.to_type = 'system' THEN sr_to.status
           WHEN t.to_type = 'testcase' THEN tc_to.status
+          WHEN t.to_type = 'risk' THEN rr_to.status
         END as "toStatus"
       FROM traces t
       LEFT JOIN users u ON t.created_by = u.id
@@ -54,19 +58,23 @@ router.get('/traces', authenticateToken, async (_req: Request, res: Response) =>
       LEFT JOIN user_requirements ur_from ON t.from_type = 'user' AND t.from_requirement_id = ur_from.id
       LEFT JOIN system_requirements sr_from ON t.from_type = 'system' AND t.from_requirement_id = sr_from.id
       LEFT JOIN testing.test_cases tc_from ON t.from_type = 'testcase' AND t.from_requirement_id = tc_from.id
+      LEFT JOIN risk_records rr_from ON t.from_type = 'risk' AND t.from_requirement_id = rr_from.id
       -- Join for to requirements
       LEFT JOIN user_requirements ur_to ON t.to_type = 'user' AND t.to_requirement_id = ur_to.id
       LEFT JOIN system_requirements sr_to ON t.to_type = 'system' AND t.to_requirement_id = sr_to.id
       LEFT JOIN testing.test_cases tc_to ON t.to_type = 'testcase' AND t.to_requirement_id = tc_to.id
+      LEFT JOIN risk_records rr_to ON t.to_type = 'risk' AND t.to_requirement_id = rr_to.id
       WHERE
         -- Exclude traces where from requirement is deleted
         (t.from_type != 'user' OR ur_from.deleted_at IS NULL) AND
         (t.from_type != 'system' OR sr_from.deleted_at IS NULL) AND
         (t.from_type != 'testcase' OR tc_from.deleted_at IS NULL) AND
+        (t.from_type != 'risk' OR rr_from.deleted_at IS NULL) AND
         -- Exclude traces where to requirement is deleted
         (t.to_type != 'user' OR ur_to.deleted_at IS NULL) AND
         (t.to_type != 'system' OR sr_to.deleted_at IS NULL) AND
-        (t.to_type != 'testcase' OR tc_to.deleted_at IS NULL)
+        (t.to_type != 'testcase' OR tc_to.deleted_at IS NULL) AND
+        (t.to_type != 'risk' OR rr_to.deleted_at IS NULL)
       ORDER BY t.created_at DESC
     `;
 
@@ -90,7 +98,8 @@ router.get('/requirements/:id/traces', authenticateToken, async (req: Request, r
     // Determine requirement type from ID format
     const requirementType = id.startsWith('UR-') ? 'user' :
                            id.startsWith('TC-') ? 'testcase' :
-                           id.startsWith('TRES-') ? 'testresult' : 'system';
+                           id.startsWith('TRES-') ? 'testresult' :
+                           id.startsWith('RISK-') ? 'risk' : 'system';
 
     // Validate that the requirement exists and is not deleted
     const pool = getPool();
@@ -100,7 +109,8 @@ router.get('/requirements/:id/traces', authenticateToken, async (req: Request, r
       'user': 'user_requirements',
       'system': 'system_requirements',
       'testcase': 'testing.test_cases',
-      'testresult': 'testing.test_results'
+      'testresult': 'testing.test_results',
+      'risk': 'risk_records'
     };
 
     const table = validTables[requirementType];
@@ -130,18 +140,21 @@ router.get('/requirements/:id/traces', authenticateToken, async (req: Request, r
           WHEN rt.from_type = 'system' THEN sr.title
           WHEN rt.from_type = 'testcase' THEN tc.title
           WHEN rt.from_type = 'testresult' THEN 'Test Result: ' || tr.result || ' - ' || trun.name
+          WHEN rt.from_type = 'risk' THEN rr.title
         END as title,
         CASE
           WHEN rt.from_type = 'user' THEN ur.description
           WHEN rt.from_type = 'system' THEN sr.description
           WHEN rt.from_type = 'testcase' THEN tc.description
           WHEN rt.from_type = 'testresult' THEN 'Result from test run ' || tr.test_run_id
+          WHEN rt.from_type = 'risk' THEN rr.description
         END as description,
         CASE
           WHEN rt.from_type = 'user' THEN ur.status
           WHEN rt.from_type = 'system' THEN sr.status
           WHEN rt.from_type = 'testcase' THEN tc.status
           WHEN rt.from_type = 'testresult' THEN tr.result
+          WHEN rt.from_type = 'risk' THEN rr.status
         END as status,
         rt.from_type as type,
         tr.executed_at,
@@ -152,17 +165,20 @@ router.get('/requirements/:id/traces', authenticateToken, async (req: Request, r
       LEFT JOIN testing.test_cases tc ON rt.from_requirement_id = tc.id AND rt.from_type = 'testcase'
       LEFT JOIN testing.test_results tr ON rt.from_requirement_id = tr.id AND rt.from_type = 'testresult'
       LEFT JOIN testing.test_runs trun ON tr.test_run_id = trun.id
+      LEFT JOIN risk_records rr ON rt.from_requirement_id = rr.id AND rt.from_type = 'risk'
       WHERE rt.to_requirement_id = $1 AND rt.to_type = $2
       AND ((rt.from_type = 'user' AND ur.deleted_at IS NULL)
            OR (rt.from_type = 'system' AND sr.deleted_at IS NULL)
            OR (rt.from_type = 'testcase' AND tc.deleted_at IS NULL)
-           OR (rt.from_type = 'testresult'))
+           OR (rt.from_type = 'testresult')
+           OR (rt.from_type = 'risk' AND rr.deleted_at IS NULL))
       ORDER BY
         CASE
           WHEN rt.from_type = 'user' THEN ur.last_modified
           WHEN rt.from_type = 'system' THEN sr.last_modified
           WHEN rt.from_type = 'testcase' THEN tc.last_modified
           WHEN rt.from_type = 'testresult' THEN tr.executed_at
+          WHEN rt.from_type = 'risk' THEN rr.last_modified
         END DESC
     `;
     
@@ -176,31 +192,37 @@ router.get('/requirements/:id/traces', authenticateToken, async (req: Request, r
           WHEN rt.to_type = 'user' THEN ur.title
           WHEN rt.to_type = 'system' THEN sr.title
           WHEN rt.to_type = 'testcase' THEN tc.title
+          WHEN rt.to_type = 'risk' THEN rr.title
         END as title,
         CASE
           WHEN rt.to_type = 'user' THEN ur.description
           WHEN rt.to_type = 'system' THEN sr.description
           WHEN rt.to_type = 'testcase' THEN tc.description
+          WHEN rt.to_type = 'risk' THEN rr.description
         END as description,
         CASE
           WHEN rt.to_type = 'user' THEN ur.status
           WHEN rt.to_type = 'system' THEN sr.status
           WHEN rt.to_type = 'testcase' THEN tc.status
+          WHEN rt.to_type = 'risk' THEN rr.status
         END as status,
         rt.to_type as type
       FROM traces rt
       LEFT JOIN user_requirements ur ON rt.to_requirement_id = ur.id AND rt.to_type = 'user'
       LEFT JOIN system_requirements sr ON rt.to_requirement_id = sr.id AND rt.to_type = 'system'
       LEFT JOIN testing.test_cases tc ON rt.to_requirement_id = tc.id AND rt.to_type = 'testcase'
+      LEFT JOIN risk_records rr ON rt.to_requirement_id = rr.id AND rt.to_type = 'risk'
       WHERE rt.from_requirement_id = $1 AND rt.from_type = $2
       AND ((rt.to_type = 'user' AND ur.deleted_at IS NULL)
            OR (rt.to_type = 'system' AND sr.deleted_at IS NULL)
-           OR (rt.to_type = 'testcase' AND tc.deleted_at IS NULL))
+           OR (rt.to_type = 'testcase' AND tc.deleted_at IS NULL)
+           OR (rt.to_type = 'risk' AND rr.deleted_at IS NULL))
       ORDER BY
         CASE
           WHEN rt.to_type = 'user' THEN ur.last_modified
           WHEN rt.to_type = 'system' THEN sr.last_modified
           WHEN rt.to_type = 'testcase' THEN tc.last_modified
+          WHEN rt.to_type = 'risk' THEN rr.last_modified
         END DESC
     `;
     
@@ -257,7 +279,7 @@ router.post('/traces', authenticateToken, async (req: AuthenticatedRequest, res:
     }
 
     // Validate types
-    if (!['user', 'system', 'testcase'].includes(fromType) || !['user', 'system', 'testcase'].includes(toType)) {
+    if (!['user', 'system', 'testcase', 'risk'].includes(fromType) || !['user', 'system', 'testcase', 'risk'].includes(toType)) {
       return unprocessableEntity(res, "Invalid type");
     }
     
@@ -266,7 +288,8 @@ router.post('/traces', authenticateToken, async (req: AuthenticatedRequest, res:
     const validTables: { [key: string]: string } = {
       'user': 'user_requirements',
       'system': 'system_requirements',
-      'testcase': 'testing.test_cases'
+      'testcase': 'testing.test_cases',
+      'risk': 'risk_records'
     };
 
     const fromTable = validTables[fromType];
@@ -339,8 +362,14 @@ router.delete('/traces/:fromId/:toId', authenticateToken, async (req: Authentica
     const { fromId, toId } = req.params;
     
     // Determine types from ID formats
-    const fromType = fromId.startsWith('UR-') ? 'user' : fromId.startsWith('TC-') ? 'testcase' : 'system';
-    const toType = toId.startsWith('UR-') ? 'user' : toId.startsWith('TC-') ? 'testcase' : 'system';
+    const fromType = fromId.startsWith('UR-') ? 'user' : 
+                     fromId.startsWith('TC-') ? 'testcase' : 
+                     fromId.startsWith('TRES-') ? 'testresult' :
+                     fromId.startsWith('RISK-') ? 'risk' : 'system';
+    const toType = toId.startsWith('UR-') ? 'user' : 
+                   toId.startsWith('TC-') ? 'testcase' : 
+                   toId.startsWith('TRES-') ? 'testresult' :
+                   toId.startsWith('RISK-') ? 'risk' : 'system';
     
     const deleteQuery = `
       DELETE FROM traces

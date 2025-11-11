@@ -6,6 +6,7 @@ import { RequirementCard } from "./RequirementCard";
 import {
   userRequirementApi,
   systemRequirementApi,
+  riskApi,
   tracesApi,
   testRunApi,
 } from "../../services/api";
@@ -14,7 +15,7 @@ interface TraceEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   requirementId: string;
-  requirementType: "user" | "system";
+  requirementType: "user" | "system" | "risk";
   traceDirection?: "upstream" | "downstream" | "both";
   onSave: () => Promise<void>;
 }
@@ -61,6 +62,9 @@ export function TraceEditModal({
         if (requirementType === "system") {
           const reqResponse = await systemRequirementApi.get(requirementId);
           setRequirement(reqResponse);
+        } else if (requirementType === "risk") {
+          const reqResponse = await riskApi.get(requirementId);
+          setRequirement(reqResponse);
         } else {
           const reqResponse = await userRequirementApi.get(requirementId);
           setRequirement(reqResponse);
@@ -75,6 +79,9 @@ export function TraceEditModal({
         if (requirementType === "system") {
           // System requirements trace FROM user requirements (upstream)
           return tracesResponse.upstreamTraces.map((trace) => trace.id);
+        } else if (requirementType === "risk") {
+          // Risks trace TO system requirements (downstream)
+          return tracesResponse.downstreamTraces.map((trace) => trace.id);
         } else {
           // User requirements trace TO system requirements (downstream)
           return tracesResponse.downstreamTraces.map((trace) => trace.id);
@@ -122,6 +129,22 @@ export function TraceEditModal({
             console.error("Failed to load test cases:", error);
             setRecentItems([]);
           }
+        }
+      } else if (requirementType === "risk") {
+        // Risks trace downstream to system requirements
+        if (traceDirection === "downstream" || traceDirection === "both") {
+          const systemReqResponse = await systemRequirementApi.list({
+            sort: "lastModified",
+            order: "desc",
+            limit: 20,
+          });
+          const filteredItems = systemReqResponse.data.filter(
+            (req) => !req.deletedAt && !alreadyTracedIds.includes(req.id),
+          );
+          setRecentItems(filteredItems.slice(0, 10));
+        } else if (traceDirection === "upstream") {
+          // Risks don't have upstream traces in current model
+          setRecentItems([]);
         }
       } else {
         // User requirements
@@ -173,6 +196,9 @@ export function TraceEditModal({
               ...downstreamTraces.map((t) => t.id),
             ];
           }
+        } else if (requirementType === "risk") {
+          // Risks trace TO system requirements (downstream)
+          return downstreamTraces.map((trace) => trace.id);
         } else {
           // User requirements trace TO system requirements (downstream)
           return downstreamTraces.map((trace) => trace.id);
@@ -216,6 +242,18 @@ export function TraceEditModal({
             }));
           setSearchResults(filteredResults.slice(0, 10));
         }
+      } else if (requirementType === "risk") {
+        // Risks can trace to system requirements
+        const response = await systemRequirementApi.list({
+          search: term,
+          limit: 20, // Get more to filter and still show results
+          sort: "lastModified",
+          order: "desc",
+        });
+        const filteredResults = response.data.filter(
+          (req) => !req.deletedAt && !alreadyTracedIds.includes(req.id),
+        );
+        setSearchResults(filteredResults.slice(0, 10)); // Take first 10 after filtering
       } else {
         // User requirements can trace to system requirements
         const response = await systemRequirementApi.list({
@@ -300,6 +338,14 @@ export function TraceEditModal({
             toType: "testcase",
           });
         }
+      } else if (requirementType === "risk") {
+        // Risk tracing TO system requirement
+        await tracesApi.createTrace({
+          fromId: requirementId,
+          toId: itemId,
+          fromType: "risk",
+          toType: "system",
+        });
       } else {
         // User requirement tracing TO system requirement
         await tracesApi.createTrace({

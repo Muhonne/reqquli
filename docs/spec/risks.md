@@ -174,3 +174,296 @@ This section details the engineering work for each Gherkin scenario. For detaile
 4.  **Step 4:** Verify the **Risk Record (RISK-005) appears as an upstream trace/source** in the SR-99 view.
 
 **Expected Result:** Bidirectional trace link successfully established and displayed between the Risk Record and the controlling System Requirement.
+
+---
+
+## 5. Step-by-Step Implementation Plan
+
+This section provides a detailed implementation roadmap for the Risk and Hazard Management feature, organized by development phase.
+
+### Phase 1: Database Schema and Types
+
+**Step 1.1: Create Database Schema**
+1. Create `risk_requirement_seq` sequence for generating RISK-{number} IDs
+2. Create `riskRecords` table with columns:
+   - `id` (VARCHAR, PRIMARY KEY, format: RISK-{number})
+   - `title` (VARCHAR(200), UNIQUE, NOT NULL)
+   - `description` (TEXT, NOT NULL)
+   - `hazard` (TEXT, NOT NULL)
+   - `harm` (TEXT, NOT NULL)
+   - `foreseeable_sequence` (TEXT)
+   - `severity` (INTEGER, 1-5 scale)
+   - `probability_p1` (INTEGER, 1-5 scale)
+   - `probability_p2` (INTEGER, 1-5 scale)
+   - `p_total_calculation_method` (TEXT, NOT NULL) - Documentation of how P_total is calculated
+   - `p_total` (INTEGER, 1-5 scale) - Calculated from P₁ and P₂
+   - `residual_risk_score` (VARCHAR) - Format: "{severity}{p_total}"
+   - `status` (VARCHAR) - 'draft', 'control_required', 'residual_risk_acceptable', 'overall_review_complete'
+   - `revision` (INTEGER, DEFAULT 0)
+   - `created_by` (UUID, FOREIGN KEY to users)
+   - `created_at` (TIMESTAMP, DEFAULT NOW())
+   - `last_modified` (TIMESTAMP)
+   - `modified_by` (UUID, FOREIGN KEY to users)
+   - `approved_at` (TIMESTAMP)
+   - `approved_by` (UUID, FOREIGN KEY to users)
+   - `deleted_at` (TIMESTAMP)
+   - `approval_notes` (TEXT)
+3. Create `controlMeasures` table with columns:
+   - `id` (UUID, PRIMARY KEY)
+   - `risk_record_id` (VARCHAR, FOREIGN KEY to riskRecords)
+   - `description` (TEXT, NOT NULL)
+   - `control_type` (VARCHAR) - 'design', 'protective', 'information'
+   - `effectiveness` (TEXT)
+   - `created_at` (TIMESTAMP, DEFAULT NOW())
+   - `created_by` (UUID, FOREIGN KEY to users)
+4. Create `riskAcceptabilityMatrix` table with columns:
+   - `id` (UUID, PRIMARY KEY)
+   - `severity` (INTEGER, 1-5)
+   - `p_total` (INTEGER, 1-5)
+   - `acceptability` (VARCHAR) - 'acceptable', 'unacceptable'
+   - `created_at` (TIMESTAMP, DEFAULT NOW())
+   - `updated_at` (TIMESTAMP)
+5. Create indexes:
+   - Primary key on `riskRecords.id`
+   - Composite index on `(residual_risk_score, status)` for filtering
+   - Composite index on `(deleted_at, status)` for soft delete filtering
+   - Foreign key index on `controlMeasures.risk_record_id`
+   - Composite unique index on `riskAcceptabilityMatrix(severity, p_total)`
+
+**Step 1.2: Create TypeScript Types**
+1. Create `src/types/risks.ts` with interfaces:
+   - `RiskRecord` - Main risk record interface
+   - `ControlMeasure` - Control measure interface
+   - `RiskAcceptabilityMatrix` - Matrix configuration interface
+   - `CreateRiskRecordRequest` - API request type
+   - `UpdateRiskRecordRequest` - API request type
+   - `RiskRecordResponse` - API response type
+   - `RiskRecordListResponse` - List response with pagination
+
+**Step 1.3: Update Database Seed Data**
+1. Add seed data for `riskAcceptabilityMatrix` with default acceptability mappings
+2. Add example risk records for testing (optional)
+
+### Phase 2: Backend Implementation
+
+**Step 2.1: Create Risk Calculation Service**
+1. Create `src/server/services/riskCalculation.service.ts`:
+   - Implement `calculatePTotal(p1: number, p2: number, method: string): number` function
+   - Implement `calculateRiskScore(severity: number, pTotal: number): string` function
+   - Implement `checkRiskAcceptability(severity: number, pTotal: number): 'acceptable' | 'unacceptable'` function
+   - Implement `updateRiskStatus(riskRecord: RiskRecord): string` function
+
+**Step 2.2: Create Risk Routes**
+1. Create `src/server/routes/risks.ts`:
+   - `GET /api/risks` - List all risks with filtering, sorting, pagination
+   - `GET /api/risks/:id` - Get single risk record with full details
+   - `POST /api/risks` - Create new risk record
+   - `PATCH /api/risks/:id` - Update risk record
+   - `POST /api/risks/:id/approve` - Approve risk record
+   - `DELETE /api/risks/:id` - Soft delete risk record
+   - `GET /api/risks/:id/downstream-traces` - Get system requirements linked as control measures
+
+**Step 2.3: Implement CRUD Operations**
+1. Implement list endpoint with:
+   - Status filtering (draft, control_required, residual_risk_acceptable)
+   - Sorting by ID, title, created date, risk score
+   - Pagination support
+   - Search functionality
+2. Implement create endpoint with:
+   - Validation of severity (1-5), P₁ (1-5), P₂ (1-5)
+   - Calculation of P_total from P₁ and P₂
+   - Calculation of initial risk score
+   - Status determination based on risk acceptability matrix
+   - Title uniqueness check
+3. Implement update endpoint with:
+   - Validation of updated values
+   - Recalculation of P_total if P₁ or P₂ changed
+   - Recalculation of risk scores
+   - Status update logic
+   - Revision tracking (increment only on approval)
+4. Implement approve endpoint with:
+   - Password verification
+   - Revision increment
+   - Status update to approved state
+   - Audit trail logging
+
+**Step 2.4: Implement Control Measures Management**
+1. Add endpoints in `src/server/routes/risks.ts`:
+   - `POST /api/risks/:id/control-measures` - Add control measure to risk
+   - `PATCH /api/risks/:id/control-measures/:measureId` - Update control measure
+   - `DELETE /api/risks/:id/control-measures/:measureId` - Remove control measure
+2. Implement control measure validation:
+   - Control type validation (design, protective, information)
+   - Description requirements
+
+**Step 2.5: Implement Risk Matrix Configuration**
+1. Create `src/server/routes/riskMatrix.ts`:
+   - `GET /api/risk-matrix` - Get current risk acceptability matrix
+   - `POST /api/risk-matrix` - Create/update matrix configuration (admin only)
+2. Implement matrix lookup service for risk acceptability checks
+
+**Step 2.6: Extend Traces for Risk Records**
+1. Update `src/server/routes/traces.ts` to support:
+   - `from_type: 'risk'` and `to_type: 'system'` for risk-to-SR traces
+   - Validation that risk records can trace to system requirements
+2. Update trace queries to include risk records in upstream/downstream views
+
+**Step 2.7: Add Audit Trail**
+1. Extend audit logging to track:
+   - Changes to severity, P₁, P₂, P_total calculation method
+   - Control measure additions/modifications
+   - Risk status changes
+   - Risk score recalculations
+
+### Phase 3: Frontend Implementation
+
+**Step 3.1: Create Risk Store**
+1. Create `src/client/stores/riskStore.ts` using Zustand:
+   - State: `risks`, `selectedRisk`, `loading`, `error`
+   - Actions: `fetchRisks`, `fetchRiskById`, `createRisk`, `updateRisk`, `approveRisk`, `deleteRisk`
+   - Use shallow selectors for performance optimization
+
+**Step 3.2: Create Risk API Service**
+1. Create `src/client/services/risksApi.ts`:
+   - Implement all API calls matching backend routes
+   - Include proper error handling
+   - Use TypeScript types from `src/types/risks.ts`
+
+**Step 3.3: Create Risk List Components**
+1. Create `src/client/components/organisms/RiskList.tsx`:
+   - Display risk records in table format
+   - Show ID, title, harm, severity, P_total, initial risk score, residual risk score, status
+   - Implement filtering by status
+   - Implement sorting by ID, title, created date, risk score
+   - Add pagination controls
+2. Create `src/client/components/molecules/RiskListItem.tsx`:
+   - Individual risk row component
+   - Display risk information with proper formatting
+   - Link to risk detail page
+
+**Step 3.4: Create Risk Detail View**
+1. Create `src/client/components/pages/RiskDetailPage.tsx`:
+   - Display full risk record information
+   - Show hazard, harm, foreseeable sequence
+   - Display severity, P₁, P₂, P_total calculation method, P_total
+   - Show initial and residual risk scores
+   - Display risk status and revision
+   - Show approval information
+2. Create `src/client/components/organisms/RiskEstimationForm.tsx`:
+   - Form for entering/editing severity, P₁, P₂
+   - Text area for P_total calculation method documentation
+   - Display calculated P_total and risk score
+   - Validation and error handling
+
+**Step 3.5: Create Risk Creation/Edit Forms**
+1. Create `src/client/components/organisms/RiskForm.tsx`:
+   - Form fields: title, description, hazard, harm, foreseeable sequence
+   - Risk estimation section (severity, P₁, P₂, calculation method)
+   - Validation for all required fields
+   - Save and cancel actions
+2. Create `src/client/components/pages/RiskCreatePage.tsx`:
+   - Wrapper page for risk creation
+   - Uses RiskForm component
+3. Create `src/client/components/pages/RiskEditPage.tsx`:
+   - Wrapper page for risk editing
+   - Loads existing risk data
+   - Uses RiskForm component
+
+**Step 3.6: Create Control Measures Interface**
+1. Create `src/client/components/organisms/ControlMeasuresList.tsx`:
+   - Display list of control measures for a risk
+   - Show control type, description, effectiveness
+   - Add/edit/delete controls
+2. Create `src/client/components/molecules/ControlMeasureForm.tsx`:
+   - Form for creating/editing control measures
+   - Fields: description, control type (dropdown), effectiveness
+   - Validation
+
+**Step 3.7: Create Risk Matrix View**
+1. Create `src/client/components/pages/RiskMatrixPage.tsx`:
+   - Read-only display of risk acceptability matrix
+   - Grid showing Severity (rows) × P_total (columns)
+   - Color-coded cells for Acceptable/Unacceptable
+   - Tooltip showing exact values
+
+**Step 3.8: Create Approval Interface**
+1. Create `src/client/components/molecules/RiskApprovalDialog.tsx`:
+   - Password confirmation input
+   - Approval notes text area
+   - Approve and cancel actions
+2. Integrate approval dialog into RiskDetailPage
+
+**Step 3.9: Add Routing**
+1. Update `src/client/main.tsx` routing:
+   - `/risks` - Risk list page
+   - `/risks/new` - Create risk page
+   - `/risks/:id` - Risk detail page
+   - `/risks/:id/edit` - Edit risk page
+   - `/risks/matrix` - Risk matrix view page
+
+**Step 3.10: Update Navigation**
+1. Add "Risk Management" to main navigation menu
+2. Add links to risk-related pages
+
+### Phase 4: Integration and Testing
+
+**Step 4.1: Unit Tests**
+1. Create `tests/risks.test.ts`:
+   - Test risk calculation service functions
+   - Test P_total calculation from P₁ and P₂
+   - Test risk score calculation
+   - Test risk acceptability checks
+   - Test status determination logic
+
+**Step 4.2: API Integration Tests**
+1. Extend `tests/risks.test.ts`:
+   - Test all CRUD endpoints
+   - Test approval workflow
+   - Test control measures management
+   - Test risk matrix configuration
+   - Test traceability to system requirements
+   - Test validation rules
+   - Test soft delete functionality
+
+**Step 4.3: E2E Tests**
+1. Create `e2e/risks.spec.ts`:
+   - Test risk creation flow
+   - Test risk estimation with P₁, P₂, P_total
+   - Test control measure addition
+   - Test risk approval workflow
+   - Test risk-to-SR traceability
+   - Test filtering and sorting
+   - Use direct URL navigation for reliability
+
+**Step 4.4: Integration with Existing Features**
+1. Update System Requirements detail view to show upstream risk records
+2. Update trace management to support risk records
+3. Ensure audit logging captures risk-related changes
+4. Verify soft delete works consistently with other requirements
+
+### Phase 5: Documentation and Deployment
+
+**Step 5.1: API Documentation**
+1. Create `docs/openapi/risks.yaml`:
+   - Document all risk management endpoints
+   - Include request/response schemas
+   - Document validation rules
+   - Include example requests/responses
+
+**Step 5.2: Update README**
+1. Add Risk and Hazard Management to feature list
+2. Document risk calculation methodology
+3. Update database schema documentation
+
+**Step 5.3: User Documentation**
+1. Create user guide for risk management workflow
+2. Document P_total calculation method requirements
+3. Document risk matrix configuration
+
+**Step 5.4: Deployment Checklist**
+1. Verify database migrations run successfully
+2. Verify seed data includes risk matrix configuration
+3. Test all endpoints in production-like environment
+4. Verify audit trail captures all required events
+5. Performance test with large datasets
+6. Security review of risk calculation logic

@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { TraceabilityPage, SystemRequirementsPage, UserRequirementsPage } from './components/pages'
+import { TraceabilityPage, SystemRequirementsPage, UserRequirementsPage, RisksPage } from './components/pages'
 import { LoginPage } from './components/pages/LoginPage'
 import { RegisterPage } from './components/pages/RegisterPage'
 import { EmailVerificationPage } from './components/pages/EmailVerificationPage'
@@ -73,6 +73,16 @@ function App() {
         <Route path="/audit" element={
           <AuthGuard>
             <AuditPage />
+          </AuthGuard>
+        } />
+        <Route path="/risks" element={
+          <AuthGuard>
+            <RisksPage />
+          </AuthGuard>
+        } />
+        <Route path="/risks/:id" element={
+          <AuthGuard>
+            <RisksPage />
           </AuthGuard>
         } />
       </Routes>

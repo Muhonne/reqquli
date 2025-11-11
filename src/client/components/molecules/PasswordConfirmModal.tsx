@@ -57,8 +57,26 @@ export function PasswordConfirmModal({
       await onConfirm(password)
       setPassword('')
       onClose()
-    } catch (err: any) {
-      setError(err?.message || 'Invalid password')
+    } catch (err: unknown) {
+      // Extract error message from various error formats
+      let errorMessage = 'Invalid password';
+      if (err && typeof err === 'object') {
+        if ('message' in err && typeof err.message === 'string') {
+          errorMessage = err.message;
+        } else if ('data' in err && err.data && typeof err.data === 'object') {
+          // Handle nested error object: {error: {code: "...", message: "..."}}
+          if ('error' in err.data) {
+            if (typeof err.data.error === 'object' && err.data.error !== null && 'message' in err.data.error && typeof err.data.error.message === 'string') {
+              errorMessage = err.data.error.message;
+            } else if (typeof err.data.error === 'string') {
+              errorMessage = err.data.error;
+            }
+          }
+        }
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false)
     }

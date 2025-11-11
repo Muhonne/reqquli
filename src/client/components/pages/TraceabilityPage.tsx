@@ -35,7 +35,7 @@ export function TraceabilityPage() {
     try {
       setLoading(true);
       const response = await tracesApi.getAllTraces();
-      setTraces(response.traces);
+      setTraces(response.traces as Trace[]);
     } catch (err) {
       console.error('Failed to fetch traces:', err);
       setError('Failed to load traces');
@@ -52,6 +52,8 @@ export function TraceabilityPage() {
         return `/system-requirements/${id}`;
       case 'testcase':
         return `/test-cases/${id}`;
+      case 'risk':
+        return `/risks/${id}`;
       default:
         return '#';
     }

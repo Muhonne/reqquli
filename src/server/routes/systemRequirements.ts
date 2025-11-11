@@ -16,10 +16,8 @@ import {
 const router = express.Router();
 
 // Map requirement from database
-function mapRequirementFromDb(dbRow: any) {
-  return {
-    ...dbRow,
-  };
+function mapRequirementFromDb(dbRow: Record<string, unknown>) {
+  return dbRow;
 }
 
 // GET /api/system-requirements - List all system requirements with filtering and pagination
