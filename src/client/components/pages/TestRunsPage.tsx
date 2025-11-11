@@ -6,7 +6,7 @@ import { TestRunList } from '../organisms/TestRunList';
 import { TestRunDetail } from '../organisms/TestRunDetail';
 import { TestRunForm } from '../organisms/TestRunForm';
 import { RequirementsListControls } from '../organisms/RequirementsListControls';
-import { PageHeader } from '../molecules/PageHeader';
+import { LeftPanel } from '../organisms/LeftPanel';
 import { Modal } from '../molecules/Modal';
 import { Button, Text, Stack } from '../atoms';
 import useTestRunStore from '../../stores/testRunStore';
@@ -115,48 +115,44 @@ export const TestRunsPage: React.FC = () => {
     <AppLayout>
       <SplitPanelLayout
         leftPanel={
-          <div className="h-full flex flex-col bg-white" style={{ boxShadow: 'inset -2px 0 4px 0 rgba(0,0,0,0.1), inset -1px 0 2px 0 rgba(0,0,0,0.06), inset 2px 0 4px 0 rgba(0,0,0,0.1), inset 1px 0 2px 0 rgba(0,0,0,0.06)' }}>
-            <div className="p-6 pb-4 border-b">
-              <PageHeader
-                title="Test Runs"
-                count={testRunPagination?.total}
-                onCreateNew={() => setShowCreateModal(true)}
-                createButtonText="New"
-                testId="create-test-run-btn"
-              />
-            </div>
-
-            <RequirementsListControls
-              search={testRunFilters.search}
-              status={testRunFilters.status as any}
-              totalCount={testRunPagination?.total || 0}
-              onSearchChange={handleSearchChange}
-              onStatusChange={handleStatusChange as any}
-              sortBy={testRunFilters.sort === 'lastModified' ? 'lastModified' : 'createdAt'}
-              sortOrder={testRunFilters.order}
-              onSortChange={handleSortChange}
-              currentPage={testRunPagination?.page || 1}
-              totalPages={testRunPagination?.pages || 1}
-              onPageChange={handlePageChange}
-              loading={loading}
-              statusOptions={[
-                { value: undefined, label: 'All' },
-                { value: 'not_started', label: 'Not Started' },
-                { value: 'in_progress', label: 'In Progress' },
-                { value: 'complete', label: 'Complete' },
-                { value: 'approved', label: 'Approved' }
-              ]}
-            />
-
-            <div className="flex-1 overflow-y-auto">
-              <TestRunList
-                testRuns={testRuns}
-                selectedTestRun={currentTestRun}
-                onSelectTestRun={handleSelectTestRun}
+          <LeftPanel
+            title="Test Runs"
+            count={testRunPagination?.total}
+            onCreateNew={() => setShowCreateModal(true)}
+            createButtonText="New"
+            headerTestId="create-test-run-btn"
+            filters={
+              <RequirementsListControls
+                search={testRunFilters.search}
+                status={testRunFilters.status as any}
+                totalCount={testRunPagination?.total || 0}
+                onSearchChange={handleSearchChange}
+                onStatusChange={handleStatusChange as any}
+                sortBy={testRunFilters.sort === 'lastModified' ? 'lastModified' : 'createdAt'}
+                sortOrder={testRunFilters.order}
+                onSortChange={handleSortChange}
+                currentPage={testRunPagination?.page || 1}
+                totalPages={testRunPagination?.pages || 1}
+                onPageChange={handlePageChange}
                 loading={loading}
+                statusOptions={[
+                  { value: undefined, label: 'All' },
+                  { value: 'not_started', label: 'Not Started' },
+                  { value: 'in_progress', label: 'In Progress' },
+                  { value: 'complete', label: 'Complete' },
+                  { value: 'approved', label: 'Approved' }
+                ]}
               />
-            </div>
-          </div>
+            }
+            ariaLabel="Test runs list"
+          >
+            <TestRunList
+              testRuns={testRuns}
+              selectedTestRun={currentTestRun}
+              onSelectTestRun={handleSelectTestRun}
+              loading={loading}
+            />
+          </LeftPanel>
         }
         rightPanel={rightPanel}
       />

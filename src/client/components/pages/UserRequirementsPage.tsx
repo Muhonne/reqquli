@@ -89,35 +89,33 @@ export function UserRequirementsPage() {
 
 
   const leftPanel = useMemo(() => (
-    <div className="flex flex-col h-full">
-      <ItemList
-        items={requirements || []}
-        onSelectItem={handleSelectRequirement}
-        onCreateNew={handleCreateNew}
-        loading={loading}
-        selectedId={id || null}
-        sortBy={filters?.sort}
-        title="User Requirements"
-        itemType="user"
-        totalCount={pagination?.total}
-        filters={
-          <RequirementsListControls
-            search={filters?.search}
-            status={filters?.status}
-            totalCount={pagination?.total || 0}
-            onSearchChange={handleSearchChange}
-            onStatusChange={handleStatusChange}
-            sortBy={filters?.sort}
-            sortOrder={filters?.order}
-            onSortChange={handleSortChange}
-            currentPage={pagination?.page || 1}
-            totalPages={pagination?.pages || 1}
-            onPageChange={handlePageChange}
-            loading={loading}
-          />
-        }
-      />
-    </div>
+    <ItemList
+      items={requirements || []}
+      onSelectItem={handleSelectRequirement}
+      onCreateNew={handleCreateNew}
+      loading={loading}
+      selectedId={id || null}
+      sortBy={filters?.sort}
+      title="User Requirements"
+      itemType="user"
+      totalCount={pagination?.total}
+      filters={
+        <RequirementsListControls
+          search={filters?.search}
+          status={filters?.status}
+          totalCount={pagination?.total || 0}
+          onSearchChange={handleSearchChange}
+          onStatusChange={handleStatusChange}
+          sortBy={filters?.sort}
+          sortOrder={filters?.order}
+          onSortChange={handleSortChange}
+          currentPage={pagination?.page || 1}
+          totalPages={pagination?.pages || 1}
+          onPageChange={handlePageChange}
+          loading={loading}
+        />
+      }
+    />
   ), [
     requirements,
     handleSelectRequirement,

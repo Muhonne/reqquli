@@ -2,7 +2,8 @@ import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, Clock, ChevronRight, AlertTriangle } from 'lucide-react';
 import { ListItemStyle } from '../atoms';
-import { EmptyState, LoadingState, PageHeader } from '../molecules';
+import { EmptyState, LoadingState } from '../molecules';
+import { LeftPanel } from './LeftPanel';
 import { RiskRecord } from '../../../types/risks';
 
 // Memoized risk item to prevent re-renders when selection changes
@@ -158,40 +159,34 @@ export function RiskList({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white" style={{ boxShadow: 'inset -2px 0 4px 0 rgba(0,0,0,0.1), inset -1px 0 2px 0 rgba(0,0,0,0.06), inset 2px 0 4px 0 rgba(0,0,0,0.1), inset 1px 0 2px 0 rgba(0,0,0,0.06)' }}>
-      <div className="p-6 pb-4 border-b">
-        <PageHeader
-          title={title}
-          count={totalCount}
-          onCreateNew={onCreateNew}
-          createButtonText="New"
-          testId="risks-create-new"
+    <LeftPanel
+      title={title}
+      count={totalCount}
+      onCreateNew={onCreateNew}
+      createButtonText="New"
+      headerTestId="risks-create-new"
+      filters={filters}
+      ariaLabel="Risks list"
+    >
+      {loading ? (
+        <LoadingState message="Loading risks..." />
+      ) : risks.length === 0 ? (
+        <EmptyState
+          icon={AlertTriangle}
+          title="No risks found"
+          description="Get started by creating your first risk record."
+          action={{
+            label: 'Create your first risk',
+            onClick: onCreateNew
+          }}
+          testid="risks-empty-state"
         />
-      </div>
-      
-      {filters && filters}
-      
-      <div className="flex-1 overflow-auto" role="region" aria-label="Risks list" tabIndex={0}>
-        {loading ? (
-          <LoadingState message="Loading risks..." />
-        ) : risks.length === 0 ? (
-          <EmptyState
-            icon={AlertTriangle}
-            title="No risks found"
-            description="Get started by creating your first risk record."
-            action={{
-              label: 'Create your first risk',
-              onClick: onCreateNew
-            }}
-            testid="risks-empty-state"
-          />
-        ) : (
-          <div>
-            {risks.map(renderRiskItem)}
-          </div>
-        )}
-      </div>
-    </div>
+      ) : (
+        <div>
+          {risks.map(renderRiskItem)}
+        </div>
+      )}
+    </LeftPanel>
   );
 }
 

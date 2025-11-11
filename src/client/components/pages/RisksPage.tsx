@@ -92,42 +92,40 @@ export function RisksPage() {
   }, [filters, setFilters, fetchRisks]);
 
   const leftPanel = useMemo(() => (
-    <div className="flex flex-col h-full">
-      <RiskList
-        risks={risks}
-        onSelectRisk={handleSelectRisk}
-        onCreateNew={handleCreateNew}
-        loading={loading ?? false}
-        selectedId={id || null}
-        sortBy={filters?.sort}
-        title="Risk Management"
-        totalCount={pagination?.total}
-        filters={
-          <RequirementsListControls
-            search={filters?.search}
-            status={filters?.status}
-            totalCount={pagination?.total || 0}
-            onSearchChange={handleSearchChange}
-            onStatusChange={handleStatusChange}
-            sortBy={filters?.sort === 'lastModified' ? 'lastModified' : 
-                    filters?.sort === 'createdAt' ? 'createdAt' : 
-                    'lastModified'}
-            sortOrder={filters?.order}
-            onSortChange={handleSortChange}
-            currentPage={pagination?.page || 1}
-            totalPages={pagination?.pages || 1}
-            onPageChange={handlePageChange}
-            loading={loading}
-            statusOptions={[
-              { value: undefined, label: 'All' },
-              { value: 'draft', label: 'Draft' },
-              { value: 'approved', label: 'Approved' }
-            ]}
-            searchPlaceholder="Search risks..."
-          />
-        }
-      />
-    </div>
+    <RiskList
+      risks={risks}
+      onSelectRisk={handleSelectRisk}
+      onCreateNew={handleCreateNew}
+      loading={loading ?? false}
+      selectedId={id || null}
+      sortBy={filters?.sort}
+      title="Risk Management"
+      totalCount={pagination?.total}
+      filters={
+        <RequirementsListControls
+          search={filters?.search}
+          status={filters?.status}
+          totalCount={pagination?.total || 0}
+          onSearchChange={handleSearchChange}
+          onStatusChange={handleStatusChange}
+          sortBy={filters?.sort === 'lastModified' ? 'lastModified' : 
+                  filters?.sort === 'createdAt' ? 'createdAt' : 
+                  'lastModified'}
+          sortOrder={filters?.order}
+          onSortChange={handleSortChange}
+          currentPage={pagination?.page || 1}
+          totalPages={pagination?.pages || 1}
+          onPageChange={handlePageChange}
+          loading={loading}
+          statusOptions={[
+            { value: undefined, label: 'All' },
+            { value: 'draft', label: 'Draft' },
+            { value: 'approved', label: 'Approved' }
+          ]}
+          searchPlaceholder="Search risks..."
+        />
+      }
+    />
   ), [
     risks,
     handleSelectRisk,

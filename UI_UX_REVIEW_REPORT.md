@@ -249,7 +249,7 @@ const sortMap = {
 
 ---
 
-### 8. **Left Panel Styling** (🟢 Low)
+### 8. **Left Panel Styling** (✅ Fixed)
 
 **Issue:** Different approaches to left panel styling:
 
@@ -267,9 +267,21 @@ style={{ boxShadow: 'inset -2px 0 4px 0 rgba(0,0,0,0.1), ...' }}
 - Duplicated styling code
 - Hard to maintain consistent look
 
-**Recommendation:**
-- Move styling to shared component or CSS class
-- Ensure all list components use same styling
+**Solution Implemented:**
+- ✅ Created shared `LeftPanel` component with consistent styling
+- ✅ Updated `ItemList`, `RiskList`, and `TestRunsPage` to use `LeftPanel`
+- ✅ Removed redundant wrapper divs from pages
+- ✅ Only list item contents vary by type (as intended)
+
+**Files Modified:**
+- `src/client/components/organisms/LeftPanel.tsx` (new shared component)
+- `src/client/components/organisms/ItemList.tsx` (uses LeftPanel)
+- `src/client/components/organisms/RiskList.tsx` (uses LeftPanel)
+- `src/client/components/pages/TestRunsPage.tsx` (uses LeftPanel)
+- `src/client/components/pages/UserRequirementsPage.tsx` (removed redundant wrapper)
+- `src/client/components/pages/SystemRequirementsPage.tsx` (removed redundant wrapper)
+- `src/client/components/pages/TestCasesPage.tsx` (removed redundant wrapper)
+- `src/client/components/pages/RisksPage.tsx` (removed redundant wrapper)
 
 ---
 

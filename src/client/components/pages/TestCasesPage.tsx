@@ -80,36 +80,34 @@ export function TestCasesPage() {
 
   // Split the selectedId out to avoid re-rendering the entire list when selection changes
   const leftPanel = (
-    <div className="flex flex-col h-full">
-      <ItemList<TestCase>
-        items={testCases}
-        onSelectItem={handleSelectTestCase}
-        onCreateNew={handleCreateNew}
-        loading={loading}
-        selectedId={id || null}
-        sortBy={testCaseFilters.sort as 'lastModified' | 'createdAt' | 'approvedAt'}
-        title="Test Cases"
-        itemType="test"
-        totalCount={testCasePagination.total}
-        filters={
-          <RequirementsListControls
-            search={testCaseFilters.search}
-            status={testCaseFilters.status}
-            totalCount={testCasePagination.total}
-            onSearchChange={handleSearchChange}
-            onStatusChange={handleStatusChange}
-            sortBy={testCaseFilters.sort as 'lastModified' | 'createdAt' | 'approvedAt'}
-            sortOrder={testCaseFilters.order as 'asc' | 'desc'}
-            onSortChange={handleSortChange}
-            currentPage={testCasePagination.page}
-            totalPages={testCasePagination.pages}
-            onPageChange={handlePageChange}
-            loading={loading}
-            searchPlaceholder="Search test cases..."
-          />
-        }
-      />
-    </div>
+    <ItemList<TestCase>
+      items={testCases}
+      onSelectItem={handleSelectTestCase}
+      onCreateNew={handleCreateNew}
+      loading={loading}
+      selectedId={id || null}
+      sortBy={testCaseFilters.sort as 'lastModified' | 'createdAt' | 'approvedAt'}
+      title="Test Cases"
+      itemType="test"
+      totalCount={testCasePagination.total}
+      filters={
+        <RequirementsListControls
+          search={testCaseFilters.search}
+          status={testCaseFilters.status}
+          totalCount={testCasePagination.total}
+          onSearchChange={handleSearchChange}
+          onStatusChange={handleStatusChange}
+          sortBy={testCaseFilters.sort as 'lastModified' | 'createdAt' | 'approvedAt'}
+          sortOrder={testCaseFilters.order as 'asc' | 'desc'}
+          onSortChange={handleSortChange}
+          currentPage={testCasePagination.page}
+          totalPages={testCasePagination.pages}
+          onPageChange={handlePageChange}
+          loading={loading}
+          searchPlaceholder="Search test cases..."
+        />
+      }
+    />
   );
 
   const rightPanel = useMemo(() => {
