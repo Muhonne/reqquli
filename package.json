@@ -18,7 +18,7 @@
     "test:api:coverage": "jest --coverage tests/*.test.ts --forceExit",
     "test:e2e": "playwright test --grep-invert=\\.smoke\\.",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:smoke": "playwright test e2e/smoke-test-traceability.smoke.ts --workers=1",
+    "test:e2e:smoke": "playwright test e2e/*.smoke.ts --workers=1",
     "prepare": "husky",
     "deploy:build": "rm -rf dist node_modules && rm -f deploy.zip && npm ci && npm run build && rm -rf node_modules && npm ci --omit=dev --ignore-scripts && zip -r deploy.zip dist node_modules package*.json scripts/*.sql .deployment"
   },

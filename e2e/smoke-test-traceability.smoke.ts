@@ -108,19 +108,46 @@ test.describe('Full Traceability Chain Smoke Test', () => {
 
       // Click Edit Traces button for upstream (to link to UR)
       await page.locator('[data-testid="requirement-edit-traces-upstream"]').click();
-      await page.waitForTimeout(1000);
-
-      // The modal should already be set to search User Requirements
-      // Clear and search for the UR
+      
+      // Wait for modal to fully load - look for the search input
       const searchInput = page.locator('input[placeholder="Search by ID or title..."]');
-      await searchInput.click();
-      await searchInput.clear();
-      await searchInput.type(urId, { delay: 100 });
-      await page.waitForTimeout(2000); // Wait for search to complete
-
-      // Find the UR in the search results and click Add Trace directly
-      // Look for the UR text and then find its associated Add Trace button
-      const addTraceButton = page.locator(`text=${urId}`).locator('xpath=following::button[text()="Add Trace"][1]');
+      await expect(searchInput).toBeVisible({ timeout: 5000 });
+      
+      // Wait for recent items to load (modal loads recent items on open)
+      await page.waitForTimeout(2000);
+      
+      // Check if UR is already in recent items (might appear if just created)
+      const traceItem = page.locator(`[data-testid="trace-item-${urId}"]`);
+      let traceItemVisible = await traceItem.isVisible({ timeout: 2000 }).catch(() => false);
+      
+      if (!traceItemVisible) {
+        // UR not in recent items, need to search for it
+        await searchInput.click();
+        await searchInput.clear();
+        await searchInput.type(urId, { delay: 100 });
+        
+        // Wait for debounced search (300ms) plus API call
+        await page.waitForTimeout(1500);
+        
+        // Check again if trace item is visible
+        traceItemVisible = await traceItem.isVisible({ timeout: 5000 }).catch(() => false);
+        
+        if (!traceItemVisible) {
+          // Try searching by just the number part
+          await searchInput.clear();
+          await searchInput.type(urId.split('-')[1], { delay: 100 });
+          await page.waitForTimeout(1500);
+          traceItemVisible = await traceItem.isVisible({ timeout: 5000 }).catch(() => false);
+        }
+      }
+      
+      // Verify the trace item is visible (the UR should be in search results)
+      await expect(traceItem).toBeVisible({ timeout: 10000 });
+      
+      // Find the UR in the search results and click Add Trace using data-testid
+      // The Add Trace button has data-testid="trace-add-${urId}"
+      const addTraceButton = page.locator(`[data-testid="trace-add-${urId}"]`);
+      await expect(addTraceButton).toBeVisible({ timeout: 10000 });
       await addTraceButton.click();
       await page.waitForTimeout(1000);
 
@@ -157,14 +184,37 @@ test.describe('Full Traceability Chain Smoke Test', () => {
     await test.step('Link SR2 to UR and approve both SRs', async () => {
       // Link SR2 to UR
       await page.locator('[data-testid="requirement-edit-traces-upstream"]').click();
-      await page.waitForTimeout(1000);
+      
+      // Wait for modal to load
       const searchInput = page.locator('input[placeholder="Search by ID or title..."]');
-      await searchInput.clear();
-      await searchInput.fill(urId);
-      await page.waitForTimeout(1500);
+      await expect(searchInput).toBeVisible({ timeout: 5000 });
+      await page.waitForTimeout(2000);
+      
+      // Check if UR is in recent items
+      const traceItem = page.locator(`[data-testid="trace-item-${urId}"]`);
+      let traceItemVisible = await traceItem.isVisible({ timeout: 2000 }).catch(() => false);
+      
+      if (!traceItemVisible) {
+        // Search for UR
+        await searchInput.clear();
+        await searchInput.fill(urId);
+        await page.waitForTimeout(1500);
+        traceItemVisible = await traceItem.isVisible({ timeout: 5000 }).catch(() => false);
+        
+        if (!traceItemVisible) {
+          // Try searching by number part
+          await searchInput.clear();
+          await searchInput.fill(urId.split('-')[1]);
+          await page.waitForTimeout(1500);
+        }
+      }
 
-      // Find the UR in the search results and click Add Trace directly
-      const addTraceButton = page.locator(`text=${urId}`).locator('xpath=following::button[text()="Add Trace"][1]');
+      // Verify the trace item is visible
+      await expect(traceItem).toBeVisible({ timeout: 10000 });
+      
+      // Find the UR in the search results and click Add Trace using data-testid
+      const addTraceButton = page.locator(`[data-testid="trace-add-${urId}"]`);
+      await expect(addTraceButton).toBeVisible({ timeout: 10000 });
       await addTraceButton.click();
       await page.waitForTimeout(500);
 
