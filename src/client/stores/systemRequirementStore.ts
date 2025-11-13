@@ -189,8 +189,7 @@ const useSystemRequirementStore = create<SystemRequirementsStore>((set, get) => 
     try {
       const response = await userRequirementApi.getDownstreamTraces(userRequirementId);
       return response.downstreamTraces;
-    } catch (error) {
-      console.error('Error fetching downstream traces:', error);
+    } catch {
       return [];
     }
   },

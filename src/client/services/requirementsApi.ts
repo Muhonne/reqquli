@@ -19,8 +19,7 @@ export const requirementsApi = {
       
       const data = await response.json()
       return data.data || []
-    } catch (error) {
-      console.error('Error fetching traced system requirements:', error)
+    } catch {
       return []
     }
   }

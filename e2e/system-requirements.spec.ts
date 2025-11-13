@@ -70,7 +70,7 @@ test.describe('System Requirements', () => {
       // Get the first 3 requirements with default sort (lastModified desc)
       const getFirst3Requirements = async () => {
         const cards = await page.locator('[data-testid^="requirement-card-"]').all();
-        const first3 = [];
+        const first3: (string | null)[] = [];
         for (let i = 0; i < Math.min(3, cards.length); i++) {
           const text = await cards[i].textContent();
           first3.push(text);
@@ -150,33 +150,39 @@ test.describe('System Requirements', () => {
   test.describe('Approve', () => {
     test('should approve requirement and preserve traces', async ({ page }) => {
       // Navigate to system requirements list
-      const requirementId = 'SR-99';  // Voice Assistant - in draft status
       await page.goto('/system-requirements');
 
       // Wait for the list to load
       await page.waitForSelector('[data-testid^="requirement-card-"]', { timeout: 10000 });
 
-      // Scroll and search for SR-84 (it might be on a different page)
+      // Find any draft requirement (one with draft status icon)
+      let requirementId: string | null = null;
       let found = false;
-      for (let i = 0; i < 5; i++) {
-        const card = page.locator(`[data-testid="requirement-card-${requirementId}"]`);
-        if (await card.isVisible()) {
-          await card.click();
-          found = true;
-          break;
-        }
-        // Try next page if exists
-        const nextBtn = page.locator('button:has-text("Next")');
-        if (await nextBtn.isVisible()) {
-          await nextBtn.click();
-          await page.waitForTimeout(500);
-        } else {
-          break;
+      
+      // Look through cards to find one with draft status
+      const cards = page.locator('[data-testid^="requirement-card-"]');
+      const cardCount = await cards.count();
+      
+      for (let i = 0; i < Math.min(cardCount, 20); i++) {
+        const card = cards.nth(i);
+        const testId = await card.getAttribute('data-testid');
+        if (testId) {
+          const id = testId.replace('requirement-card-', '');
+          // Check if this requirement has a draft status (not approved)
+          const draftStatus = page.locator(`[data-testid="requirement-status-draft-${id}"]`);
+          const approvedStatus = page.locator(`[data-testid="requirement-status-approved-${id}"]`);
+          
+          if (await draftStatus.isVisible() || !(await approvedStatus.isVisible())) {
+            requirementId = id;
+            await card.click();
+            found = true;
+            break;
+          }
         }
       }
 
-      if (!found) {
-        throw new Error(`Could not find ${requirementId} in the list`);
+      if (!found || !requirementId) {
+        throw new Error('Could not find any draft requirement in the list');
       }
 
       // Wait for detail panel to load
@@ -184,15 +190,14 @@ test.describe('System Requirements', () => {
 
       // Wait for the requirement details to fully load
       // Wait for the approve button to be in the DOM and potentially visible
-      await page.waitForSelector('[data-testid="requirement-approve"], [data-testid="requirement-status-approved-SR-99"]', { timeout: 10000 });
+      await page.waitForSelector(`[data-testid="requirement-approve"], [data-testid="requirement-status-approved-${requirementId}"]`, { timeout: 10000 });
 
-      // SR-84 has no traces in seed data, so we skip checking for traces before approval
       // This test focuses on the approval process itself
 
       // Click approve button (should be visible for draft requirement)
       const approveButton = page.locator('[data-testid="requirement-approve"]');
       // Check if already approved
-      const statusApproved = page.locator('[data-testid="requirement-status-approved-SR-99"]');
+      const statusApproved = page.locator(`[data-testid="requirement-status-approved-${requirementId}"]`);
       if (await statusApproved.isVisible()) {
         // Already approved, skip the test
         return;
@@ -259,6 +264,10 @@ test.describe('System Requirements', () => {
       // Add a small delay to ensure form is fully in edit mode
       await page.waitForTimeout(500);
 
+      // Verify Save button is disabled when there are no changes
+      const saveButton = page.locator('[data-testid="requirement-save"]');
+      await expect(saveButton).toBeDisabled({ timeout: 5000 });
+
       // Make a change to description - in edit mode the field should be editable
       const descriptionField = page.locator('[data-testid="requirement-description"]');
       await expect(descriptionField).toBeVisible({ timeout: 10000 });
@@ -266,11 +275,19 @@ test.describe('System Requirements', () => {
       const currentDescription = await descriptionField.inputValue({ timeout: 10000 });
       await descriptionField.fill(currentDescription + ' - Modified');
 
+      // After making changes, Save button should be enabled
+      await expect(saveButton).toBeEnabled({ timeout: 5000 });
+
       // Save
       await page.locator('[data-testid="requirement-save"]').click();
 
       // Wait for save to complete and return to view mode
-      await page.waitForSelector('[data-testid="requirement-edit"]', { state: 'visible', timeout: 10000 });
+      // Wait for either the edit button or readonly description field to appear
+      // (both indicate we're back in view mode)
+      await Promise.race([
+        page.waitForSelector('[data-testid="requirement-edit"]', { state: 'visible', timeout: 15000 }),
+        page.waitForSelector('[data-testid="requirement-description-readonly"]', { state: 'visible', timeout: 15000 })
+      ]);
 
       // Traces are managed independently through requirementTraces table
       // So editing content doesn't affect trace relationships

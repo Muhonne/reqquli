@@ -144,11 +144,10 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
     for (const reqId of linkedRequirements) {
       await client.query(
         `INSERT INTO traces (
-          from_requirement_id, to_requirement_id,
-          from_type, to_type, created_by, created_at
-        ) VALUES ($1, $2, $3, 'testcase', $4, NOW())
-        ON CONFLICT DO NOTHING`,
-        [reqId, testCaseId, 'system', userId]
+          from_requirement_id, to_requirement_id, created_by, created_at
+        ) VALUES ($1, $2, $3, NOW())
+        ON CONFLICT (from_requirement_id, to_requirement_id) DO NOTHING`,
+        [reqId, testCaseId, userId]
       );
     }
 

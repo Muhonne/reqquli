@@ -45,7 +45,8 @@ export function LoginPage() {
       // Redirect to main page
       navigate('/');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Login failed';
+      // Handle both old format (message) and new format (error.message)
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || 'Login failed';
       setError(errorMessage);
       
       // Check if error is due to unverified email
@@ -162,7 +163,7 @@ export function LoginPage() {
 
           <div className="text-center">
             <Text className="text-sm text-gray-600" testid="login-footer-text">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500" data-testid="login-signup-link">
                 Sign up
               </Link>

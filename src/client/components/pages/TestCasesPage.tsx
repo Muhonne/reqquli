@@ -29,7 +29,7 @@ export function TestCasesPage() {
   // Initial fetch
   useEffect(() => {
     fetchTestCases();
-  }, []);
+  }, [fetchTestCases]);
 
   useEffect(() => {
     if (id === 'new') {

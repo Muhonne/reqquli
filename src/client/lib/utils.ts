@@ -30,8 +30,7 @@ export function getTokenExpiration(token: string): Date | null {
     }
 
     return null;
-  } catch (error) {
-    console.error('Failed to decode JWT token:', error);
+  } catch {
     return null;
   }
 }

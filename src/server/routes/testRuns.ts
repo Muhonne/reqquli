@@ -513,9 +513,9 @@ router.put(
         // Create system-generated trace from test case to test result (test result is downstream)
         await client.query(`
           INSERT INTO traces
-          (from_requirement_id, to_requirement_id, from_type, to_type, created_by, is_system_generated)
-          VALUES ($1, $2, 'testcase', 'testresult', $3, TRUE)
-          ON CONFLICT DO NOTHING
+          (from_requirement_id, to_requirement_id, created_by, is_system_generated)
+          VALUES ($1, $2, $3, TRUE)
+          ON CONFLICT (from_requirement_id, to_requirement_id) DO NOTHING
         `, [testCase.test_case_id, testResultId, userId]);
       }
 
@@ -1298,7 +1298,7 @@ router.get(
       LEFT JOIN users u1 ON tc.created_by = u1.id
       LEFT JOIN users u2 ON tc.approved_by = u2.id
       LEFT JOIN users u3 ON tc.modified_by = u3.id
-      WHERE rtl.from_requirement_id = $1 AND rtl.from_type = 'system' AND rtl.to_type = 'testcase' AND tc.deleted_at IS NULL
+      WHERE rtl.from_requirement_id = $1 AND rtl.to_requirement_id LIKE 'TC-%' AND tc.deleted_at IS NULL
       ORDER BY tc.id
     `;
       const testCasesResult = await pool.query(testCasesQuery, [reqId]);

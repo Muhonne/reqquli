@@ -175,8 +175,8 @@ CREATE INDEX idx_risk_records_deleted_status ON risk_records(deleted_at, status)
 CREATE INDEX idx_risk_records_active ON risk_records(deleted_at) WHERE deleted_at IS NULL;
 
 -- Indexes for traces table
-CREATE INDEX idx_traces_from ON traces(from_requirement_id, from_type);
-CREATE INDEX idx_traces_to ON traces(to_requirement_id, to_type);
+CREATE INDEX idx_traces_from ON traces(from_requirement_id);
+CREATE INDEX idx_traces_to ON traces(to_requirement_id);
 CREATE INDEX idx_traces_created_by ON traces(created_by);
 
 -- Testing schema
@@ -527,9 +527,7 @@ BEGIN
         v_event_data := jsonb_build_object(
             'trace_id', NEW.id,
             'from_id', NEW.from_requirement_id,
-            'from_type', NEW.from_type,
             'to_id', NEW.to_requirement_id,
-            'to_type', NEW.to_type,
             'is_system_generated', NEW.is_system_generated
         );
     ELSIF TG_OP = 'DELETE' THEN
@@ -538,9 +536,7 @@ BEGIN
         v_event_data := jsonb_build_object(
             'trace_id', OLD.id,
             'from_id', OLD.from_requirement_id,
-            'from_type', OLD.from_type,
-            'to_id', OLD.to_requirement_id,
-            'to_type', OLD.to_type
+            'to_id', OLD.to_requirement_id
         );
     ELSE
         RETURN NEW;

@@ -108,12 +108,6 @@ export function TraceEditModal({
 
   const config = TRACE_CONFIGS[requirementType];
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen, requirementType, requirementId, traceDirection]);
-
   // Helper to get already traced IDs based on direction
   const getAlreadyTracedIds = useCallback(
     (direction: "upstream" | "downstream" | "both"): string[] => {
@@ -141,7 +135,7 @@ export function TraceEditModal({
   );
 
   // Helper to load items for a specific direction (supports multiple source APIs)
-  const loadItemsForDirection = async (
+  const loadItemsForDirection = useCallback(async (
     directionConfig: DirectionConfig,
     searchTerm?: string
   ): Promise<any[]> => {
@@ -176,8 +170,7 @@ export function TraceEditModal({
             response = await sourceApi.list(listParams);
             allItems.push(...(response.data || []));
           }
-        } catch (error) {
-          console.error("Error loading items from API:", error);
+        } catch {
           // Continue with other APIs even if one fails
         }
       }
@@ -188,14 +181,13 @@ export function TraceEditModal({
       );
 
       return uniqueItems;
-    } catch (error) {
-      console.error("Error loading items:", error);
+    } catch {
       return [];
     }
-  };
+  }, []);
 
   // Helper to filter and format items
-  const filterAndFormatItems = (
+  const filterAndFormatItems = useCallback((
     items: any[],
     alreadyTracedIds: string[],
     isTestCase: boolean
@@ -212,9 +204,9 @@ export function TraceEditModal({
         );
       })
       .slice(0, 10);
-  };
+  }, [requirementId]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Load current traces
@@ -227,8 +219,7 @@ export function TraceEditModal({
       try {
         const reqResponse = await config.getApi(requirementId);
         setRequirement(reqResponse);
-      } catch (error) {
-        console.error("Failed to load requirement details:", error);
+      } catch {
         setRequirement(null);
       }
 
@@ -258,17 +249,22 @@ export function TraceEditModal({
       }
 
       setRecentItems(allItems);
-    } catch (error) {
-      console.error("Error loading trace data:", error);
+    } catch {
       setUpstreamTraces([]);
       setDownstreamTraces([]);
       setRecentItems([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [requirementId, traceDirection, config, getAlreadyTracedIds, filterAndFormatItems, loadItemsForDirection]);
 
-  const handleSearch = async (term: string) => {
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen, loadData]);
+
+  const handleSearch = useCallback(async (term: string) => {
     if (!term.trim()) {
       setSearchResults([]);
       return;
@@ -303,20 +299,19 @@ export function TraceEditModal({
       }
 
       setSearchResults(allResults);
-    } catch (error) {
-      console.error("Error searching:", error);
+    } catch {
       setSearchResults([]);
     } finally {
       setSearching(false);
     }
-  };
+  }, [traceDirection, config, getAlreadyTracedIds, filterAndFormatItems, loadItemsForDirection]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       handleSearch(searchTerm);
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  }, [searchTerm, handleSearch]);
 
   const displayItems = searchTerm ? searchResults : recentItems;
 
@@ -326,8 +321,8 @@ export function TraceEditModal({
       await tracesApi.deleteTrace(traceId, requirementId);
       await loadData();
       await onSave();
-    } catch (error) {
-      console.error("Error removing upstream trace:", error);
+    } catch {
+      // Error handling is done by the API service
     } finally {
       setRemovingTraceId(null);
     }
@@ -339,8 +334,8 @@ export function TraceEditModal({
       await tracesApi.deleteTrace(requirementId, traceId);
       await loadData();
       await onSave();
-    } catch (error) {
-      console.error("Error removing downstream trace:", error);
+    } catch {
+      // Error handling is done by the API service
     } finally {
       setRemovingTraceId(null);
     }
@@ -380,8 +375,8 @@ export function TraceEditModal({
 
       await loadData();
       await onSave();
-    } catch (error) {
-      console.error("Error adding trace:", error);
+    } catch {
+      // Error handling is done by the API service
     } finally {
       setAddingTraceId(null);
     }

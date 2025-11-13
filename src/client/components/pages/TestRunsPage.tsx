@@ -32,23 +32,20 @@ export const TestRunsPage: React.FC = () => {
 
   useEffect(() => {
     fetchTestRuns();
-  }, [testRunFilters]);
+  }, [testRunFilters, fetchTestRuns]);
 
   useEffect(() => {
     if (runId) {
       fetchTestRun(runId);
     }
-  }, [runId]);
+  }, [runId, fetchTestRun]);
 
   const handleCreateTestRun = async (data: any) => {
-    console.log('Creating test run with data:', data);
     try {
       const newTestRun = await createTestRun(data);
-      console.log('Test run created:', newTestRun);
       setShowCreateModal(false);
       navigate(`/test-runs/${newTestRun.id}`);
-    } catch (error) {
-      console.error('Failed to create test run:', error);
+    } catch {
       // Error is handled in store
     }
   };

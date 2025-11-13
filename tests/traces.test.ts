@@ -79,8 +79,6 @@ describe("Trace Management API", () => {
       {
         fromId: testUserReq1,
         toId: testSystemReq1,
-        fromType: "user",
-        toType: "system",
       },
       {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -93,8 +91,6 @@ describe("Trace Management API", () => {
       {
         fromId: testUserReq1,
         toId: testSystemReq2,
-        fromType: "user",
-        toType: "system",
       },
       {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -107,8 +103,6 @@ describe("Trace Management API", () => {
       {
         fromId: testUserReq2,
         toId: testSystemReq1,
-        fromType: "user",
-        toType: "system",
       },
       {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -136,8 +130,6 @@ describe("Trace Management API", () => {
         {
           fromId: newUR,
           toId: testSystemReq1,
-          fromType: "user",
-          toType: "system",
         },
         {
           headers: { Authorization: `Bearer ${authToken}` },
@@ -149,6 +141,7 @@ describe("Trace Management API", () => {
       expect(response.data.trace).toBeDefined();
       expect(response.data.trace.fromId).toBe(newUR);
       expect(response.data.trace.toId).toBe(testSystemReq1);
+      // Types are computed from ID prefixes in the backend
       expect(response.data.trace.fromType).toBe("user");
       expect(response.data.trace.toType).toBe("system");
       expect(response.data.trace.createdAt).toBeDefined();
@@ -163,8 +156,6 @@ describe("Trace Management API", () => {
           {
             fromId: testUserReq1,
             toId: testSystemReq1,
-            fromType: "user",
-            toType: "system",
           },
           {
             headers: { Authorization: `Bearer ${authToken}` },
@@ -177,24 +168,22 @@ describe("Trace Management API", () => {
       }
     });
 
-    it("should reject trace with invalid requirement types", async () => {
+    it("should reject trace with non-existent requirement IDs", async () => {
       try {
         await axios.post(
           `${API_URL}/api/traces`,
           {
-            fromId: testUserReq1,
+            fromId: "INVALID-99999",
             toId: testSystemReq1,
-            fromType: "invalid",
-            toType: "system",
           },
           {
             headers: { Authorization: `Bearer ${authToken}` },
           },
         );
-        fail("Should have rejected invalid requirement type");
+        fail("Should have rejected invalid requirement ID");
       } catch (error: any) {
-        expect(error.response.status).toBe(422);
-        expect(error.response.data.error.message).toContain("Invalid type");
+        // Should reject because the ID doesn't match any known prefix or doesn't exist
+        expect([404, 422]).toContain(error.response.status);
       }
     });
 
@@ -205,8 +194,6 @@ describe("Trace Management API", () => {
           {
             fromId: "UR-99999",
             toId: testSystemReq1,
-            fromType: "user",
-            toType: "system",
           },
           {
             headers: { Authorization: `Bearer ${authToken}` },
@@ -530,8 +517,6 @@ describe("Trace Management API", () => {
         {
           fromId: tempURId,
           toId: tempSRId,
-          fromType: "user",
-          toType: "system",
         },
         {
           headers: { Authorization: `Bearer ${authToken}` },
@@ -595,8 +580,6 @@ describe("Trace Management API", () => {
         await axios.post(`${API_URL}/api/traces`, {
           fromId: testUserReq1,
           toId: testSystemReq1,
-          fromType: "user",
-          toType: "system",
         });
         fail("Should have required authentication");
       } catch (error: any) {

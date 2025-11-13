@@ -145,8 +145,8 @@ router.get('/requirements/:id/traces', authenticateToken, async (req: Request, r
         rt.from_requirement_id AS id,
         rt.is_system_generated as "isSystemGenerated",
         ${buildRequirementDetailsQuery('item', 'rt.from_requirement_id')},
-        tr.executed_at,
-        tr.test_run_id
+        tr_item.executed_at,
+        tr_item.test_run_id
       FROM traces rt
       LEFT JOIN user_requirements ur_item ON rt.from_requirement_id = ur_item.id
       LEFT JOIN system_requirements sr_item ON rt.from_requirement_id = sr_item.id
@@ -154,7 +154,6 @@ router.get('/requirements/:id/traces', authenticateToken, async (req: Request, r
       LEFT JOIN testing.test_results tr_item ON rt.from_requirement_id = tr_item.id
       LEFT JOIN testing.test_runs trun_item ON tr_item.test_run_id = trun_item.id
       LEFT JOIN risk_records rr_item ON rt.from_requirement_id = rr_item.id
-      LEFT JOIN testing.test_results tr ON rt.from_requirement_id = tr.id
       WHERE rt.to_requirement_id = $1
       AND (
         (ur_item.id IS NULL OR ur_item.deleted_at IS NULL) AND
@@ -176,6 +175,8 @@ router.get('/requirements/:id/traces', authenticateToken, async (req: Request, r
       LEFT JOIN user_requirements ur_item ON rt.to_requirement_id = ur_item.id
       LEFT JOIN system_requirements sr_item ON rt.to_requirement_id = sr_item.id
       LEFT JOIN testing.test_cases tc_item ON rt.to_requirement_id = tc_item.id
+      LEFT JOIN testing.test_results tr_item ON rt.to_requirement_id = tr_item.id
+      LEFT JOIN testing.test_runs trun_item ON tr_item.test_run_id = trun_item.id
       LEFT JOIN risk_records rr_item ON rt.to_requirement_id = rr_item.id
       WHERE rt.from_requirement_id = $1
       AND (
@@ -183,7 +184,7 @@ router.get('/requirements/:id/traces', authenticateToken, async (req: Request, r
         (sr_item.id IS NULL OR sr_item.deleted_at IS NULL) AND
         (tc_item.id IS NULL OR tc_item.deleted_at IS NULL) AND
         (rr_item.id IS NULL OR rr_item.deleted_at IS NULL) AND
-        (ur_item.id IS NOT NULL OR sr_item.id IS NOT NULL OR tc_item.id IS NOT NULL OR rr_item.id IS NOT NULL)
+        (tr_item.id IS NOT NULL OR ur_item.id IS NOT NULL OR sr_item.id IS NOT NULL OR tc_item.id IS NOT NULL OR rr_item.id IS NOT NULL)
       )
       ORDER BY last_modified_item DESC NULLS LAST
     `;

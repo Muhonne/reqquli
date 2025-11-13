@@ -390,7 +390,7 @@ function ItemListComponent<T extends ListableEntity | RiskRecord | TestRun>({
       count={totalCount}
       onCreateNew={onCreateNew}
       createButtonText="New"
-      headerTestId={isRisk ? "risks-create-new" : isTestRun ? "create-test-run-btn" : "items-create-new"}
+      headerTestId={isRisk ? "risks-create-new" : isTestRun ? "create-test-run-btn" : "requirements-create-new"}
       filters={filters}
       ariaLabel={isRisk ? "Risks list" : isTestRun ? "Test runs list" : "Items list"}
     >

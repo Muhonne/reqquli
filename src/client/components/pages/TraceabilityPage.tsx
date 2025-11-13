@@ -37,8 +37,7 @@ export function TraceabilityPage() {
       setLoading(true);
       const response = await tracesApi.getAllTraces();
       setTraces(response.traces as Trace[]);
-    } catch (err) {
-      console.error('Failed to fetch traces:', err);
+    } catch {
       setError('Failed to load traces');
     } finally {
       setLoading(false);
@@ -116,7 +115,7 @@ export function TraceabilityPage() {
     return { nodes: nodeArray, edges: edgesWithTypes };
   }, [traces, getTypeFromId]);
 
-  const drawSankeyDiagram = () => {
+  const drawSankeyDiagram = useCallback(() => {
     if (!svgRef.current || !processedData) {return;}
 
     const svg = d3.select(svgRef.current);
@@ -453,12 +452,12 @@ export function TraceabilityPage() {
       }
     });
 
-  };
+  }, [processedData, navigate]);
 
   useEffect(() => {
     if (!processedData) {return;}
     drawSankeyDiagram();
-  }, [processedData]);
+  }, [processedData, drawSankeyDiagram]);
 
   if (loading) {
     return (

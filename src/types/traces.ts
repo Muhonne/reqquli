@@ -4,7 +4,10 @@ export interface RequirementTrace {
   id: string;
   title: string;
   status: 'draft' | 'approved';
-  type: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
+  type: 'user' | 'system' | 'testcase' | 'testresult' | 'risk';
+  isSystemGenerated?: boolean;
+  executedAt?: string;
+  testRunId?: string;
 }
 
 export interface TraceRelationship {
@@ -12,11 +15,16 @@ export interface TraceRelationship {
   fromId: string;
   toId: string;
   // Types are computed dynamically from ID prefixes in API responses, not stored in DB
-  fromType?: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
-  toType?: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
+  fromType?: 'user' | 'system' | 'testcase' | 'testresult' | 'risk';
+  toType?: 'user' | 'system' | 'testcase' | 'testresult' | 'risk';
   createdAt: string;
-  createdBy: string;
+  createdBy?: string;
   createdByName?: string;
+  isSystemGenerated?: boolean;
+  fromTitle?: string;
+  fromStatus?: string;
+  toTitle?: string;
+  toStatus?: string;
 }
 
 export interface RequirementTracesResponse {

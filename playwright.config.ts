@@ -15,11 +15,12 @@ export default defineConfig({
   ],
   use: {
     baseURL,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'on',
+    video: 'off',
     actionTimeout: 10000,
     navigationTimeout: 30000,
+    headless: true,
   },
 
   projects: [

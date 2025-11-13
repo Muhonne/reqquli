@@ -569,7 +569,7 @@ export function RiskForm({ isCreateMode = false }: RiskFormProps) {
                   links={downstreamTraces.map(trace => ({
                     id: trace.id,
                     title: trace.title,
-                    type: trace.type === 'testrun' ? undefined : trace.type as 'user' | 'system' | 'testcase' | 'risk' | undefined
+                    type: trace.type === 'testresult' ? undefined : trace.type as 'user' | 'system' | 'testcase' | 'risk' | undefined
                   }))}
                   type="system"
                   loading={loadingTraced}

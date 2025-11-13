@@ -3,7 +3,9 @@ import { AUTH_TOKEN_KEY } from '../constants'
 class AuthService {
   private static instance: AuthService
   
-  private constructor() {}
+  private constructor() {
+    // Private constructor to enforce singleton pattern
+  }
   
   static getInstance(): AuthService {
     if (!AuthService.instance) {

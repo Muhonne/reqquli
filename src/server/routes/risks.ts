@@ -912,8 +912,7 @@ router.get("/:id/downstream-traces", async (req: AuthenticatedRequest, res: Resp
       FROM system_requirements sr
       INNER JOIN traces rt ON sr.id = rt.to_requirement_id
       WHERE rt.from_requirement_id = $1
-        AND rt.from_type = 'risk'
-        AND rt.to_type = 'system'
+        AND rt.to_requirement_id LIKE 'SR-%'
         AND sr.deleted_at IS NULL
       ORDER BY sr.id
     `,

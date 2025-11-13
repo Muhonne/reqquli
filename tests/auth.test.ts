@@ -147,7 +147,10 @@ describe('Authentication Endpoints', () => {
         fail('Should have required authentication');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.error).toContain('Authentication required');
+        const errorMessage = typeof error.response.data.error === 'string' 
+          ? error.response.data.error 
+          : error.response.data.error?.message || '';
+        expect(errorMessage).toContain('Authentication required');
       }
     });
 
@@ -164,7 +167,10 @@ describe('Authentication Endpoints', () => {
         fail('Should have thrown an error');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.error).toContain('Invalid token');
+        const errorMessage = typeof error.response.data.error === 'string' 
+          ? error.response.data.error 
+          : error.response.data.error?.message || '';
+        expect(errorMessage).toContain('Invalid token');
       }
     });
 
@@ -181,7 +187,10 @@ describe('Authentication Endpoints', () => {
         fail('Should have required authentication');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.error).toContain('Authentication required');
+        const errorMessage = typeof error.response.data.error === 'string' 
+          ? error.response.data.error 
+          : error.response.data.error?.message || '';
+        expect(errorMessage).toContain('Authentication required');
       }
     });
   });

@@ -179,7 +179,7 @@ export function SystemRequirementsPage() {
           </div>
         );
     }
-  }, [error, clearError, viewMode, id]);
+  }, [error, clearError, viewMode]);
 
   return (
     <AppLayout>

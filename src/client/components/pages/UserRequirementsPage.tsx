@@ -66,25 +66,25 @@ export function UserRequirementsPage() {
     const newFilters = { ...filters, search, page: 1 };
     setFilters(newFilters);
     fetchRequirements(newFilters);
-  }, [filters?.sort, filters?.order, filters?.limit, setFilters, fetchRequirements]);
+  }, [filters, setFilters, fetchRequirements]);
 
   const handleStatusChange = useCallback((status: string | undefined) => {
     const newFilters = { ...filters, status: status as 'draft' | 'approved' | undefined, page: 1 };
     setFilters(newFilters);
     fetchRequirements(newFilters);
-  }, [filters?.sort, filters?.order, filters?.limit, setFilters, fetchRequirements]);
+  }, [filters, setFilters, fetchRequirements]);
 
   const handlePageChange = useCallback((page: number) => {
     const newFilters = { ...filters, page };
     setFilters(newFilters);
     fetchRequirements(newFilters);
-  }, [filters?.sort, filters?.order, filters?.limit, filters?.search, filters?.status, setFilters, fetchRequirements]);
+  }, [filters, setFilters, fetchRequirements]);
 
   const handleSortChange = useCallback((sort: 'lastModified' | 'createdAt' | 'approvedAt', order: 'asc' | 'desc') => {
     const newFilters = { ...filters, sort, order, page: 1 };
     setFilters(newFilters);
     fetchRequirements(newFilters);
-  }, [filters?.search, filters?.status, filters?.limit, setFilters, fetchRequirements]);
+  }, [filters, setFilters, fetchRequirements]);
 
 
 
@@ -179,7 +179,7 @@ export function UserRequirementsPage() {
           </div>
         );
     }
-  }, [error, clearError, viewMode, id]);
+  }, [error, clearError, viewMode]);
 
   return (
     <AppLayout>

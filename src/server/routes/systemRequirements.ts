@@ -173,8 +173,7 @@ router.get("/trace-from/:userRequirementId", async (req: AuthenticatedRequest, r
          SELECT 1 FROM traces rt
          WHERE rt.to_requirement_id = sr.id
          AND rt.from_requirement_id = $1
-         AND rt.from_type = 'user'
-         AND rt.to_type = 'system'
+         AND rt.to_requirement_id LIKE 'SR-%'
        )
        ORDER BY sr.id ASC`,
       [normalizedId],
