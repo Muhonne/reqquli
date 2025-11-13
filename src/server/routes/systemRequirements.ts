@@ -15,11 +15,6 @@ import {
 
 const router = express.Router();
 
-// Map requirement from database
-function mapRequirementFromDb(dbRow: Record<string, unknown>) {
-  return dbRow;
-}
-
 // GET /api/system-requirements - List all system requirements with filtering and pagination
 router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -132,9 +127,7 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
     const total = parseInt(countResult.rows[0].count);
     const pages = Math.ceil(total / effectiveLimit);
 
-    const mappedData = result.rows.map(mapRequirementFromDb);
-
-    return successResponse(res, mappedData, {
+    return successResponse(res, result.rows, {
       pagination: {
         total,
         page: parseInt(page as string),
@@ -187,10 +180,7 @@ router.get("/trace-from/:userRequirementId", async (req: AuthenticatedRequest, r
       [normalizedId],
     );
 
-    const mappedData = result.rows.map(mapRequirementFromDb);
-
-    return successResponse(res, mappedData,
-    );
+    return successResponse(res, result.rows);
   } catch (error) {
     logger.error("Error fetching traced system requirements:", error);
     return internalServerError(res, "Internal server error");
@@ -234,7 +224,7 @@ router.get("/:id", async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({
       success: true,
-      requirement: mapRequirementFromDb(result.rows[0]),
+      requirement: result.rows[0],
     });
   } catch (error) {
     logger.error("Error fetching system requirement:", error);
@@ -352,7 +342,7 @@ router.post("/", async (req: AuthenticatedRequest, res: Response) => {
 
     res.status(201).json({
       success: true,
-      requirement: mapRequirementFromDb(insertResult.rows[0]),
+      requirement: insertResult.rows[0],
     });
   } catch (error) {
     logger.error("Error creating system requirement:", error);
@@ -466,7 +456,7 @@ router.post("/:id/approve", async (req: AuthenticatedRequest, res: Response) => 
 
     res.json({
       success: true,
-      requirement: mapRequirementFromDb(updateResult.rows[0]),
+      requirement: updateResult.rows[0],
     });
   } catch (error) {
     logger.error("Error approving system requirement:", error);
@@ -657,7 +647,7 @@ router.patch("/:id", async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({
       success: true,
-      requirement: mapRequirementFromDb(updateResult.rows[0]),
+      requirement: updateResult.rows[0],
     });
   } catch (error) {
     logger.error("Error updating system requirement:", error);

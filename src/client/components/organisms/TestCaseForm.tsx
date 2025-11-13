@@ -96,26 +96,37 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
       if (response.ok) {
         const data = await response.json();
         // Map upstream traces to display linked requirements
-        const mappedUpstream = (data.upstreamTraces || []).map((trace: any) => ({
-          id: trace.from_requirement_id,
-          title: trace.from_title || trace.from_requirement_id,
-          description: trace.description,
-          status: trace.status,
-          type: trace.from_type as 'user' | 'system' | 'testcase'
-        }));
+        // Determine type from ID prefix (UR-, SR-, RISK-, etc.)
+        const mappedUpstream = (data.upstreamTraces || []).map((trace: any) => {
+          const id = trace.from_requirement_id;
+          const type = id?.startsWith('UR-') ? 'user' :
+                       id?.startsWith('SR-') ? 'system' :
+                       id?.startsWith('RISK-') ? 'risk' : 'system';
+          return {
+            id,
+            title: trace.from_title || id,
+            description: trace.description,
+            status: trace.status,
+            type: type as 'user' | 'system' | 'testcase' | 'risk'
+          };
+        });
         setUpstreamTraces(mappedUpstream);
 
         // Map downstream traces
-        const mappedDownstream = (data.downstreamTraces || []).map((trace: any) => ({
-          id: trace.to_requirement_id,
-          title: trace.to_title || trace.testRunName || trace.to_requirement_id,
-          description: trace.description,
-          status: trace.status,
-          type: (trace.trace_type || trace.to_type) as 'user' | 'system' | 'testcase' | 'testresult',
-          result: trace.result,
-          testRunId: trace.testRunId,
-          testRunName: trace.testRunName
-        }));
+        const mappedDownstream = (data.downstreamTraces || []).map((trace: any) => {
+          const id = trace.to_requirement_id;
+          const type = trace.trace_type || (id?.startsWith('TRES-') ? 'testresult' : 'testcase');
+          return {
+            id,
+            title: trace.to_title || trace.testRunName || id,
+            description: trace.description,
+            status: trace.status,
+            type: type as 'user' | 'system' | 'testcase' | 'testresult',
+            result: trace.result,
+            testRunId: trace.testRunId,
+            testRunName: trace.testRunName
+          };
+        });
         setDownstreamTraces(mappedDownstream);
       } else {
         // Failed to load traces
@@ -550,7 +561,7 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Heading level={2} className="text-base font-medium">
-                      Traces from System Requirements
+                      Trace from
                     </Heading>
                     <Button
                       variant="secondary"

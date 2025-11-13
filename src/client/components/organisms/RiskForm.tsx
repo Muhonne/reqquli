@@ -552,7 +552,7 @@ export function RiskForm({ isCreateMode = false }: RiskFormProps) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Heading level={2} className="text-base font-medium">
-                    Traces to System Requirements
+                    Trace to
                   </Heading>
                   <Button
                     variant="secondary"

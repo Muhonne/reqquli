@@ -137,11 +137,10 @@ export function TestCaseTraceEditModal({
     setAddingTraceId(itemId);
     try {
       // Create trace from system requirement to test case
+      // Types are determined from ID prefixes on the backend
       await tracesApi.createTrace({
         fromId: itemId,
-        toId: testCaseId,
-        fromType: 'system',
-        toType: 'testcase'
+        toId: testCaseId
       });
 
       // Reload data to refresh the trace list

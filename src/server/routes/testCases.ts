@@ -466,17 +466,42 @@ router.get('/:id/traces', authenticateToken, async (req: AuthenticatedRequest, r
     }
 
     // Get upstream traces (requirements that trace TO this test case)
+    // Types are determined from ID prefixes, so we join all possible source tables
     const upstreamQuery = `
       SELECT
-        t.*,
-        COALESCE(sr.title, ur.title) as from_title,
-        tc.title as to_title
+        t.id,
+        t.from_requirement_id,
+        t.to_requirement_id,
+        t.created_at,
+        t.is_system_generated,
+        COALESCE(
+          NULLIF(sr.title, ''),
+          NULLIF(ur.title, ''),
+          NULLIF(rr.title, '')
+        ) as from_title,
+        tc.title as to_title,
+        COALESCE(
+          sr.description,
+          ur.description,
+          rr.description
+        ) as description,
+        COALESCE(
+          sr.status,
+          ur.status,
+          rr.status
+        ) as status
       FROM traces t
-      LEFT JOIN system_requirements sr ON t.from_type = 'system' AND t.from_requirement_id = sr.id
-      LEFT JOIN user_requirements ur ON t.from_type = 'user' AND t.from_requirement_id = ur.id
+      LEFT JOIN system_requirements sr ON t.from_requirement_id = sr.id
+      LEFT JOIN user_requirements ur ON t.from_requirement_id = ur.id
+      LEFT JOIN risk_records rr ON t.from_requirement_id = rr.id
       LEFT JOIN testing.test_cases tc ON t.to_requirement_id = tc.id
       WHERE t.to_requirement_id = $1
-        AND t.to_type = 'testcase'
+        AND (
+          (sr.id IS NULL OR sr.deleted_at IS NULL) AND
+          (ur.id IS NULL OR ur.deleted_at IS NULL) AND
+          (rr.id IS NULL OR rr.deleted_at IS NULL) AND
+          (sr.id IS NOT NULL OR ur.id IS NOT NULL OR rr.id IS NOT NULL)
+        )
       ORDER BY t.created_at DESC
     `;
 
@@ -485,7 +510,11 @@ router.get('/:id/traces', authenticateToken, async (req: AuthenticatedRequest, r
     // Get downstream traces (test results that trace FROM this test case)
     const downstreamQuery = `
       SELECT
-        t.*,
+        t.id,
+        t.from_requirement_id,
+        t.to_requirement_id,
+        t.created_at,
+        t.is_system_generated,
         tc.title as from_title,
         tres.test_run_id as "testRunId",
         tr.name as "testRunName",
@@ -495,11 +524,10 @@ router.get('/:id/traces', authenticateToken, async (req: AuthenticatedRequest, r
         'testresult' as trace_type
       FROM traces t
       LEFT JOIN testing.test_cases tc ON t.from_requirement_id = tc.id
-      LEFT JOIN testing.test_results tres ON t.to_requirement_id = tres.id AND t.to_type = 'testresult'
+      LEFT JOIN testing.test_results tres ON t.to_requirement_id = tres.id
       LEFT JOIN testing.test_runs tr ON tres.test_run_id = tr.id
       LEFT JOIN users u2 ON tr.approved_by = u2.id
       WHERE t.from_requirement_id = $1
-        AND t.from_type = 'testcase'
       ORDER BY t.created_at DESC
     `;
 

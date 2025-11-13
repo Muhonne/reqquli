@@ -1,4 +1,3 @@
-import { getPool } from '../config/database';
 import logger from '../config/logger';
 import { RiskRecord } from '../../types/risks';
 
@@ -45,39 +44,6 @@ export function calculateRiskScore(severity: number, pTotal: number): string {
   }
 
   return `${severity}${pTotal}`;
-}
-
-/**
- * Check if a risk is acceptable based on the risk acceptability matrix
- * 
- * @param severity - Severity value (1-5 scale)
- * @param pTotal - Total Probability (1-5 scale)
- * @returns 'acceptable' | 'unacceptable'
- */
-export async function checkRiskAcceptability(
-  severity: number,
-  pTotal: number
-): Promise<'acceptable' | 'unacceptable'> {
-  const pool = getPool();
-
-  try {
-    const result = await pool.query(
-      'SELECT acceptability FROM risk_acceptability_matrix WHERE severity = $1 AND p_total = $2',
-      [severity, pTotal]
-    );
-
-    if (result.rows.length === 0) {
-      // Default to unacceptable if not found in matrix (conservative approach)
-      logger.warn(`Risk acceptability not found for severity=${severity}, p_total=${pTotal}, defaulting to unacceptable`);
-      return 'unacceptable';
-    }
-
-    return result.rows[0].acceptability as 'acceptable' | 'unacceptable';
-  } catch (error) {
-    logger.error('Error checking risk acceptability:', error);
-    // Default to unacceptable on error (conservative approach)
-    return 'unacceptable';
-  }
 }
 
 /**

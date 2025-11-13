@@ -11,8 +11,9 @@ export interface TraceRelationship {
   id: string;
   fromId: string;
   toId: string;
-  fromType: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
-  toType: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
+  // Types are computed dynamically from ID prefixes in API responses, not stored in DB
+  fromType?: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
+  toType?: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
   createdAt: string;
   createdBy: string;
   createdByName?: string;
@@ -32,8 +33,7 @@ export interface DownstreamTracesResponse {
 export interface CreateTraceRequest {
   fromId: string;
   toId: string;
-  fromType: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
-  toType: 'user' | 'system' | 'testcase' | 'testrun' | 'risk';
+  // Types are determined from ID prefixes on the backend, no need to send them
 }
 
 export interface CreateTraceResponse {

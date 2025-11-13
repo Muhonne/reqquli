@@ -30,26 +30,6 @@ export interface RiskRecord {
   downstreamTraces?: RequirementTrace[];
 }
 
-export interface ControlMeasure {
-  id: string;
-  riskRecordId: string;
-  description: string;
-  controlType: 'design' | 'protective' | 'information';
-  effectiveness?: string;
-  createdAt: string;
-  createdBy: string;
-  createdByName?: string;
-}
-
-export interface RiskAcceptabilityMatrix {
-  id: string;
-  severity: number; // 1-5
-  pTotal: number; // 1-5
-  acceptability: 'acceptable' | 'unacceptable';
-  createdAt: string;
-  updatedAt?: string;
-}
-
 export interface RiskRecordListResponse {
   success: boolean;
   data: RiskRecord[];
@@ -110,27 +90,5 @@ export interface RiskRecordFilters {
   page?: number;
   limit?: number;
   search?: string;
-}
-
-export interface CreateControlMeasureRequest {
-  description: string;
-  controlType: 'design' | 'protective' | 'information';
-  effectiveness?: string;
-}
-
-export interface UpdateControlMeasureRequest {
-  description?: string;
-  controlType?: 'design' | 'protective' | 'information';
-  effectiveness?: string;
-}
-
-export interface ControlMeasureResponse {
-  success: boolean;
-  controlMeasure: ControlMeasure;
-}
-
-export interface RiskAcceptabilityMatrixResponse {
-  success: boolean;
-  matrix: RiskAcceptabilityMatrix[];
 }
 

@@ -13,8 +13,7 @@ import {
   successResponse
 } from '../utils/responses';
 import {
-  calculatePTotal,
-  checkRiskAcceptability
+  calculatePTotal
 } from '../services/riskCalculation.service';
 
 const router = express.Router();
@@ -342,8 +341,7 @@ router.post("/", async (req: AuthenticatedRequest, res: Response) => {
     // Calculate P_total from P₁ and P₂
     const pTotal = calculatePTotal(probabilityP1, probabilityP2, pTotalCalculationMethod);
 
-    // Check risk acceptability (for informational purposes, but status is always draft or approved)
-    await checkRiskAcceptability(severity, pTotal);
+    // Remove: await checkRiskAcceptability(severity, pTotal);
     const finalStatus = status === "approved" ? "approved" : "draft";
 
     // Generate ID using sequence
@@ -552,7 +550,6 @@ router.patch("/:id", async (req: AuthenticatedRequest, res: Response) => {
       pTotalCalculationMethod !== undefined;
 
     // Get current values for calculation
-    const currentSeverity = severity !== undefined ? severity : existing.severity;
     const currentP1 = probabilityP1 !== undefined ? probabilityP1 : existing.probabilityP1;
     const currentP2 = probabilityP2 !== undefined ? probabilityP2 : existing.probabilityP2;
     const currentMethod = pTotalCalculationMethod !== undefined ? pTotalCalculationMethod : existing.pTotalCalculationMethod;
@@ -619,8 +616,7 @@ router.patch("/:id", async (req: AuthenticatedRequest, res: Response) => {
       updates.push(`p_total = $${paramCount}`);
       values.push(newPTotal);
 
-      // Check risk acceptability (for informational purposes, but status is always draft or approved)
-      await checkRiskAcceptability(currentSeverity, newPTotal);
+      // Remove: await checkRiskAcceptability(currentSeverity, newPTotal);
       
       // Only update status if it's not being explicitly set and risk was draft
       if (status === undefined && existing.status === 'draft') {

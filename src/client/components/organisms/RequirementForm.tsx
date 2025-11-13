@@ -353,7 +353,7 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Heading level={2} className="text-base font-medium">
-                        Traces from User Requirements
+                        Trace from
                       </Heading>
                       <Button
                         variant="secondary"
@@ -378,7 +378,7 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Heading level={2} className="text-base font-medium">
-                      {requirementType === 'user' ? 'Traces to System Requirements' : 'Traces to Test Cases'}
+                      Trace to
                     </Heading>
                     <Button
                       variant="secondary"

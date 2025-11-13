@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Modal } from "./Modal";
 import { Button, Input, ListItemStyle } from "../atoms";
 import { TraceListItem } from "./TraceListItem";
@@ -20,6 +20,73 @@ interface TraceEditModalProps {
   onSave: () => Promise<void>;
 }
 
+// Configuration for each requirement type's trace behavior
+type DirectionConfig = {
+  // Support multiple source APIs (e.g., system upstream can be from user requirements OR risks)
+  getSourceApis: () => any[];
+  getTracedIds: (traces: any[]) => string[];
+  isTestCase?: boolean;
+  // Function to determine fromId/toId based on direction
+  getTraceIds: (direction: "upstream" | "downstream", itemId: string, requirementId: string) => {
+    fromId: string;
+    toId: string;
+  };
+};
+
+type TraceConfig = {
+  getApi: (id: string) => Promise<any>;
+  upstream: DirectionConfig | null;
+  downstream: DirectionConfig | null;
+};
+
+const TRACE_CONFIGS: Record<"user" | "system" | "risk", TraceConfig> = {
+  system: {
+    getApi: (id: string) => systemRequirementApi.get(id),
+    upstream: {
+      // System requirements can trace from both user requirements AND risks
+      getSourceApis: () => [userRequirementApi, riskApi],
+      getTracedIds: (traces) => traces.map((t) => t.id),
+      getTraceIds: (_direction, itemId, requirementId) => ({
+        fromId: itemId,
+        toId: requirementId,
+      }),
+    },
+    downstream: {
+      getSourceApis: () => [testRunApi],
+      getTracedIds: (traces) => traces.map((t) => t.id),
+      isTestCase: true,
+      getTraceIds: (_direction, itemId, requirementId) => ({
+        fromId: requirementId,
+        toId: itemId,
+      }),
+    },
+  },
+  risk: {
+    getApi: (id: string) => riskApi.get(id),
+    upstream: null,
+    downstream: {
+      getSourceApis: () => [systemRequirementApi],
+      getTracedIds: (traces) => traces.map((t) => t.id),
+      getTraceIds: (_direction, itemId, requirementId) => ({
+        fromId: requirementId,
+        toId: itemId,
+      }),
+    },
+  },
+  user: {
+    getApi: (id: string) => userRequirementApi.get(id),
+    upstream: null,
+    downstream: {
+      getSourceApis: () => [systemRequirementApi],
+      getTracedIds: (traces) => traces.map((t) => t.id),
+      getTraceIds: (_direction, itemId, requirementId) => ({
+        fromId: requirementId,
+        toId: itemId,
+      }),
+    },
+  },
+};
+
 export function TraceEditModal({
   isOpen,
   onClose,
@@ -39,131 +106,158 @@ export function TraceEditModal({
   const [removingTraceId, setRemovingTraceId] = useState<string | null>(null);
   const [requirement, setRequirement] = useState<any>(null);
 
+  const config = TRACE_CONFIGS[requirementType];
+
   useEffect(() => {
     if (isOpen) {
       loadData();
     }
   }, [isOpen, requirementType, requirementId, traceDirection]);
 
+  // Helper to get already traced IDs based on direction
+  const getAlreadyTracedIds = useCallback(
+    (direction: "upstream" | "downstream" | "both"): string[] => {
+      const upstreamConfig = config.upstream;
+      const downstreamConfig = config.downstream;
+
+      if (direction === "upstream" && upstreamConfig) {
+        return upstreamConfig.getTracedIds(upstreamTraces);
+      }
+      if (direction === "downstream" && downstreamConfig) {
+        return downstreamConfig.getTracedIds(downstreamTraces);
+      }
+      if (direction === "both") {
+        const upstreamIds = upstreamConfig
+          ? upstreamConfig.getTracedIds(upstreamTraces)
+          : [];
+        const downstreamIds = downstreamConfig
+          ? downstreamConfig.getTracedIds(downstreamTraces)
+          : [];
+        return [...upstreamIds, ...downstreamIds];
+      }
+      return [];
+    },
+    [config, upstreamTraces, downstreamTraces]
+  );
+
+  // Helper to load items for a specific direction (supports multiple source APIs)
+  const loadItemsForDirection = async (
+    directionConfig: DirectionConfig,
+    searchTerm?: string
+  ): Promise<any[]> => {
+    const sourceApis = directionConfig.getSourceApis();
+    const isTestCase = directionConfig.isTestCase || false;
+
+    try {
+      const listParams = {
+        ...(searchTerm && { search: searchTerm }),
+        sort: "lastModified",
+        order: "desc" as const,
+        limit: 20,
+      };
+
+      const allItems: any[] = [];
+
+      // Load from all source APIs and combine results
+      for (const sourceApi of sourceApis) {
+        try {
+          let response: any;
+          if (isTestCase) {
+            response = await sourceApi.listTestCases(listParams);
+            const items = (response.data || []).map((tc: any) => ({
+              id: tc.id,
+              title: tc.title,
+              description: tc.description,
+              status: tc.status,
+              type: "testcase" as const,
+            }));
+            allItems.push(...items);
+          } else {
+            response = await sourceApi.list(listParams);
+            allItems.push(...(response.data || []));
+          }
+        } catch (error) {
+          console.error("Error loading items from API:", error);
+          // Continue with other APIs even if one fails
+        }
+      }
+
+      // Remove duplicates by ID (in case same item appears from multiple APIs)
+      const uniqueItems = Array.from(
+        new Map(allItems.map((item) => [item.id, item])).values()
+      );
+
+      return uniqueItems;
+    } catch (error) {
+      console.error("Error loading items:", error);
+      return [];
+    }
+  };
+
+  // Helper to filter and format items
+  const filterAndFormatItems = (
+    items: any[],
+    alreadyTracedIds: string[],
+    isTestCase: boolean
+  ): any[] => {
+    return items
+      .filter((item) => {
+        if (isTestCase) {
+          return !alreadyTracedIds.includes(item.id);
+        }
+        return (
+          item.id !== requirementId &&
+          !item.deletedAt &&
+          !alreadyTracedIds.includes(item.id)
+        );
+      })
+      .slice(0, 10);
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load current traces for this requirement
+      // Load current traces
       const tracesResponse =
         await tracesApi.getRequirementTraces(requirementId);
       setUpstreamTraces(tracesResponse.upstreamTraces);
-
-      // Downstream traces will include test cases if they're linked via the junction table
-      // The API should return test cases as downstream traces with type 'testcase'
       setDownstreamTraces(tracesResponse.downstreamTraces);
 
       // Load requirement details for title
       try {
-        if (requirementType === "system") {
-          const reqResponse = await systemRequirementApi.get(requirementId);
-          setRequirement(reqResponse);
-        } else if (requirementType === "risk") {
-          const reqResponse = await riskApi.get(requirementId);
-          setRequirement(reqResponse);
-        } else {
-          const reqResponse = await userRequirementApi.get(requirementId);
-          setRequirement(reqResponse);
-        }
+        const reqResponse = await config.getApi(requirementId);
+        setRequirement(reqResponse);
       } catch (error) {
         console.error("Failed to load requirement details:", error);
         setRequirement(null);
       }
 
-      // Get IDs of items that are already traced to exclude them
-      const getAlreadyTracedIds = () => {
-        if (requirementType === "system") {
-          // System requirements trace FROM user requirements (upstream)
-          return tracesResponse.upstreamTraces.map((trace) => trace.id);
-        } else if (requirementType === "risk") {
-          // Risks trace TO system requirements (downstream)
-          return tracesResponse.downstreamTraces.map((trace) => trace.id);
-        } else {
-          // User requirements trace TO system requirements (downstream)
-          return tracesResponse.downstreamTraces.map((trace) => trace.id);
-        }
-      };
-
-      const alreadyTracedIds = getAlreadyTracedIds();
-
-      // Load recent items for selection, excluding already traced items
-      // Based on requirement type and trace direction
-      if (requirementType === "system") {
-        if (traceDirection === "upstream" || traceDirection === "both") {
-          // System requirements trace upstream from user requirements
-          const userReqResponse = await userRequirementApi.list({
-            sort: "lastModified",
-            order: "desc",
-            limit: 20,
-          });
-          const filteredItems = userReqResponse.data.filter(
-            (req) =>
-              req.id !== requirementId &&
-              !req.deletedAt &&
-              !alreadyTracedIds.includes(req.id),
-          );
-          setRecentItems(filteredItems.slice(0, 10));
-        } else if (traceDirection === "downstream") {
-          // System requirements trace downstream to test cases
-          try {
-            const testCaseResponse = await testRunApi.listTestCases({
-              sort: "lastModified",
-              order: "desc",
-              limit: 20,
-            });
-            const filteredItems = (testCaseResponse.data || [])
-              .filter((tc) => !alreadyTracedIds.includes(tc.id))
-              .map((tc) => ({
-                id: tc.id,
-                title: tc.title,
-                description: tc.description,
-                status: tc.status,
-                type: "testcase" as const,
-              }));
-            setRecentItems(filteredItems.slice(0, 10));
-          } catch (error) {
-            console.error("Failed to load test cases:", error);
-            setRecentItems([]);
-          }
-        }
-      } else if (requirementType === "risk") {
-        // Risks trace downstream to system requirements
-        if (traceDirection === "downstream" || traceDirection === "both") {
-          const systemReqResponse = await systemRequirementApi.list({
-            sort: "lastModified",
-            order: "desc",
-            limit: 20,
-          });
-          const filteredItems = systemReqResponse.data.filter(
-            (req) => !req.deletedAt && !alreadyTracedIds.includes(req.id),
-          );
-          setRecentItems(filteredItems.slice(0, 10));
-        } else if (traceDirection === "upstream") {
-          // Risks don't have upstream traces in current model
-          setRecentItems([]);
-        }
-      } else {
-        // User requirements
-        if (traceDirection === "downstream" || traceDirection === "both") {
-          // User requirements trace downstream to system requirements
-          const systemReqResponse = await systemRequirementApi.list({
-            sort: "lastModified",
-            order: "desc",
-            limit: 20,
-          });
-          const filteredItems = systemReqResponse.data.filter(
-            (req) => !req.deletedAt && !alreadyTracedIds.includes(req.id),
-          );
-          setRecentItems(filteredItems.slice(0, 10));
-        } else if (traceDirection === "upstream") {
-          // User requirements don't have upstream traces in current model
-          setRecentItems([]);
-        }
+      // Load recent items based on trace direction
+      const directionsToLoad: ("upstream" | "downstream")[] = [];
+      if (traceDirection === "upstream" || traceDirection === "both") {
+        directionsToLoad.push("upstream");
       }
+      if (traceDirection === "downstream" || traceDirection === "both") {
+        directionsToLoad.push("downstream");
+      }
+
+      const allItems: any[] = [];
+      for (const direction of directionsToLoad) {
+        const directionConfig =
+          direction === "upstream" ? config.upstream : config.downstream;
+        if (!directionConfig) {continue;}
+
+        const items = await loadItemsForDirection(directionConfig);
+        const alreadyTracedIds = getAlreadyTracedIds(direction);
+        const filtered = filterAndFormatItems(
+          items,
+          alreadyTracedIds,
+          directionConfig.isTestCase || false
+        );
+        allItems.push(...filtered);
+      }
+
+      setRecentItems(allItems);
     } catch (error) {
       console.error("Error loading trace data:", error);
       setUpstreamTraces([]);
@@ -182,91 +276,33 @@ export function TraceEditModal({
 
     setSearching(true);
     try {
-      // Get IDs of items that are already traced to exclude them
-      const getAlreadyTracedIds = () => {
-        if (requirementType === "system") {
-          if (traceDirection === "upstream") {
-            return upstreamTraces.map((trace) => trace.id);
-          } else if (traceDirection === "downstream") {
-            return downstreamTraces.map((trace) => trace.id);
-          } else {
-            // Both - need to consider direction being searched
-            return [
-              ...upstreamTraces.map((t) => t.id),
-              ...downstreamTraces.map((t) => t.id),
-            ];
-          }
-        } else if (requirementType === "risk") {
-          // Risks trace TO system requirements (downstream)
-          return downstreamTraces.map((trace) => trace.id);
-        } else {
-          // User requirements trace TO system requirements (downstream)
-          return downstreamTraces.map((trace) => trace.id);
-        }
-      };
-
-      const alreadyTracedIds = getAlreadyTracedIds();
-
-      if (requirementType === "system") {
-        if (traceDirection === "upstream" || traceDirection === "both") {
-          // System requirements can trace from user requirements (upstream)
-          const response = await userRequirementApi.list({
-            search: term,
-            limit: 20,
-            sort: "lastModified",
-            order: "desc",
-          });
-          const filteredResults = response.data.filter(
-            (req) =>
-              req.id !== requirementId &&
-              !req.deletedAt &&
-              !alreadyTracedIds.includes(req.id),
-          );
-          setSearchResults(filteredResults.slice(0, 10));
-        } else if (traceDirection === "downstream") {
-          // System requirements trace to test cases (downstream)
-          const response = await testRunApi.listTestCases({
-            search: term,
-            limit: 20,
-            sort: "lastModified",
-            order: "desc",
-          });
-          const filteredResults = (response.data || [])
-            .filter((tc) => !alreadyTracedIds.includes(tc.id))
-            .map((tc) => ({
-              id: tc.id,
-              title: tc.title,
-              description: tc.description,
-              status: tc.status,
-              type: "testcase" as const,
-            }));
-          setSearchResults(filteredResults.slice(0, 10));
-        }
-      } else if (requirementType === "risk") {
-        // Risks can trace to system requirements
-        const response = await systemRequirementApi.list({
-          search: term,
-          limit: 20, // Get more to filter and still show results
-          sort: "lastModified",
-          order: "desc",
-        });
-        const filteredResults = response.data.filter(
-          (req) => !req.deletedAt && !alreadyTracedIds.includes(req.id),
-        );
-        setSearchResults(filteredResults.slice(0, 10)); // Take first 10 after filtering
-      } else {
-        // User requirements can trace to system requirements
-        const response = await systemRequirementApi.list({
-          search: term,
-          limit: 20, // Get more to filter and still show results
-          sort: "lastModified",
-          order: "desc",
-        });
-        const filteredResults = response.data.filter(
-          (req) => !req.deletedAt && !alreadyTracedIds.includes(req.id),
-        );
-        setSearchResults(filteredResults.slice(0, 10)); // Take first 10 after filtering
+      const directionsToSearch: ("upstream" | "downstream")[] = [];
+      if (traceDirection === "upstream" || traceDirection === "both") {
+        directionsToSearch.push("upstream");
       }
+      if (traceDirection === "downstream" || traceDirection === "both") {
+        directionsToSearch.push("downstream");
+      }
+
+      const allResults: any[] = [];
+      for (const direction of directionsToSearch) {
+        const directionConfig =
+          direction === "upstream" ? config.upstream : config.downstream;
+        if (!directionConfig) {continue;}
+
+        const items = await loadItemsForDirection(directionConfig, term);
+        const alreadyTracedIds = getAlreadyTracedIds(
+          traceDirection === "both" ? "both" : direction
+        );
+        const filtered = filterAndFormatItems(
+          items,
+          alreadyTracedIds,
+          directionConfig.isTestCase || false
+        );
+        allResults.push(...filtered);
+      }
+
+      setSearchResults(allResults);
     } catch (error) {
       console.error("Error searching:", error);
       setSearchResults([]);
@@ -288,9 +324,7 @@ export function TraceEditModal({
     setRemovingTraceId(traceId);
     try {
       await tracesApi.deleteTrace(traceId, requirementId);
-      // Immediately refresh the modal's trace data
       await loadData();
-      // Notify parent component
       await onSave();
     } catch (error) {
       console.error("Error removing upstream trace:", error);
@@ -302,12 +336,8 @@ export function TraceEditModal({
   const handleRemoveDownstreamTrace = async (traceId: string) => {
     setRemovingTraceId(traceId);
     try {
-      // Use the junction table for all traces
       await tracesApi.deleteTrace(requirementId, traceId);
-
-      // Immediately refresh the modal's trace data
       await loadData();
-      // Notify parent component
       await onSave();
     } catch (error) {
       console.error("Error removing downstream trace:", error);
@@ -319,46 +349,36 @@ export function TraceEditModal({
   const handleAddTrace = async (itemId: string) => {
     setAddingTraceId(itemId);
     try {
-      if (requirementType === "system") {
-        if (traceDirection === "upstream") {
-          // System requirement tracing FROM user requirement
-          await tracesApi.createTrace({
-            fromId: itemId,
-            toId: requirementId,
-            fromType: "user",
-            toType: "system",
-          });
-        } else if (traceDirection === "downstream") {
-          // System requirement tracing TO test case
-          // Use the junction table with test case as target
-          await tracesApi.createTrace({
-            fromId: requirementId,
-            toId: itemId, // Test case ID
-            fromType: "system",
-            toType: "testcase",
-          });
-        }
-      } else if (requirementType === "risk") {
-        // Risk tracing TO system requirement
-        await tracesApi.createTrace({
-          fromId: requirementId,
-          toId: itemId,
-          fromType: "risk",
-          toType: "system",
-        });
-      } else {
-        // User requirement tracing TO system requirement
-        await tracesApi.createTrace({
-          fromId: requirementId,
-          toId: itemId,
-          fromType: "user",
-          toType: "system",
-        });
+      // Determine direction: if both directions are possible, check which one the item matches
+      let direction: "upstream" | "downstream" = "downstream";
+      
+      if (traceDirection === "upstream") {
+        direction = "upstream";
+      } else if (traceDirection === "downstream") {
+        direction = "downstream";
+      } else if (traceDirection === "both") {
+        // For "both", try to determine based on available configs
+        // Prefer upstream if available, otherwise downstream
+        direction = config.upstream ? "upstream" : "downstream";
       }
 
-      // Immediately refresh the modal's trace data
+      const directionConfig =
+        direction === "upstream" ? config.upstream : config.downstream;
+      if (!directionConfig) {
+        throw new Error(`No configuration for ${direction} direction`);
+      }
+
+      // Get fromId/toId based on direction (no types needed - backend determines from ID prefixes)
+      const { fromId, toId } = directionConfig.getTraceIds(
+        direction,
+        itemId,
+        requirementId
+      );
+
+      // Create trace with only IDs (types determined by backend from ID prefixes)
+      await tracesApi.createTrace({ fromId, toId });
+
       await loadData();
-      // Notify parent component
       await onSave();
     } catch (error) {
       console.error("Error adding trace:", error);
@@ -382,7 +402,7 @@ export function TraceEditModal({
           </div>
 
           <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-hidden">
-            {/* Upstream Traces - requirements that trace TO this one */}
+            {/* Upstream Traces */}
             {(traceDirection === "upstream" || traceDirection === "both") &&
               upstreamTraces.length > 0 && (
                 <div className="flex-1 min-h-0 flex flex-col">

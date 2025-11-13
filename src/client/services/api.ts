@@ -74,20 +74,31 @@ async function fetchApi<T>(endpoint: string, options: RequestInit & { skipAuthRe
 
   const response = await fetch(url, config);
   
+  // Helper function to extract error message from standardized backend format
+  // Standard format: { error: { code: string, message: string, details?: any } }
+  const extractErrorMessage = (errorData: any, defaultMessage: string): string => {
+    if (errorData?.error) {
+      if (typeof errorData.error === 'object' && errorData.error?.message) {
+        return errorData.error.message;
+      }
+      if (typeof errorData.error === 'string') {
+        return errorData.error;
+      }
+    }
+    return defaultMessage;
+  };
+
   // Handle unauthorized
   if (response.status === 401) {
     // If skipAuthRedirect is true, just throw the error without redirecting
     if (options.skipAuthRedirect) {
-      let errorData: { error?: string | { message?: string } };
+      let errorData: any;
       try {
         errorData = await response.json();
       } catch {
-        errorData = { error: 'Unauthorized' };
+        errorData = {};
       }
-      // Extract message from nested error object if present
-      const errorMessage = typeof errorData.error === 'object' && errorData.error?.message
-        ? errorData.error.message
-        : (typeof errorData.error === 'string' ? errorData.error : 'Unauthorized');
+      const errorMessage = extractErrorMessage(errorData, 'Unauthorized');
       throw new ApiError(401, errorMessage, errorData);
     }
     
@@ -99,16 +110,13 @@ async function fetchApi<T>(endpoint: string, options: RequestInit & { skipAuthRe
   }
   
   if (!response.ok) {
-    let errorData: { error?: string | { message?: string } };
+    let errorData: any;
     try {
       errorData = await response.json();
     } catch {
-      errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+      errorData = {};
     }
-    // Extract message from nested error object if present
-    const errorMessage = typeof errorData.error === 'object' && errorData.error?.message
-      ? errorData.error.message
-      : (typeof errorData.error === 'string' ? errorData.error : `HTTP ${response.status}: ${response.statusText}`);
+    const errorMessage = extractErrorMessage(errorData, `HTTP ${response.status}: ${response.statusText}`);
     throw new ApiError(response.status, errorMessage, errorData);
   }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../templates';
 import { Spinner, Text, Button, Stack } from '../atoms';
@@ -9,8 +9,9 @@ interface Trace {
   id: string;
   fromId: string;
   toId: string;
-  fromType: 'user' | 'system' | 'testcase';
-  toType: 'user' | 'system' | 'testcase';
+  // Types are computed from ID prefixes, may be optional in API response
+  fromType?: 'user' | 'system' | 'testcase' | 'risk' | 'testresult';
+  toType?: 'user' | 'system' | 'testcase' | 'risk' | 'testresult';
   fromTitle: string;
   toTitle: string;
   fromStatus: string;
@@ -59,19 +60,33 @@ export function TraceabilityPage() {
     }
   };
 
+  // Helper to determine type from ID prefix
+  const getTypeFromId = useCallback((id: string): string => {
+    if (id?.startsWith('UR-')) {return 'user';}
+    if (id?.startsWith('SR-')) {return 'system';}
+    if (id?.startsWith('RISK-')) {return 'risk';}
+    if (id?.startsWith('TC-')) {return 'testcase';}
+    if (id?.startsWith('TRES-')) {return 'testresult';}
+    return 'system'; // default
+  }, []);
+
   const processedData = useMemo(() => {
     if (!traces.length) {return null;}
 
     const nodes = new Map<string, { id: string; type: string; title: string; status: string }>();
 
     traces.forEach(trace => {
-      const fromKey = `${trace.fromType}:${trace.fromId}`;
-      const toKey = `${trace.toType}:${trace.toId}`;
+      // Determine types from IDs if not provided
+      const fromType = trace.fromType || getTypeFromId(trace.fromId);
+      const toType = trace.toType || getTypeFromId(trace.toId);
+      
+      const fromKey = `${fromType}:${trace.fromId}`;
+      const toKey = `${toType}:${trace.toId}`;
 
       if (!nodes.has(fromKey)) {
         nodes.set(fromKey, {
           id: trace.fromId,
-          type: trace.fromType,
+          type: fromType,
           title: trace.fromTitle,
           status: trace.fromStatus
         });
@@ -79,7 +94,7 @@ export function TraceabilityPage() {
       if (!nodes.has(toKey)) {
         nodes.set(toKey, {
           id: trace.toId,
-          type: trace.toType,
+          type: toType,
           title: trace.toTitle,
           status: trace.toStatus
         });
@@ -91,8 +106,15 @@ export function TraceabilityPage() {
       ...value
     }));
 
-    return { nodes: nodeArray, edges: traces };
-  }, [traces]);
+    // Ensure edges have computed types
+    const edgesWithTypes = traces.map(trace => ({
+      ...trace,
+      fromType: trace.fromType || getTypeFromId(trace.fromId),
+      toType: trace.toType || getTypeFromId(trace.toId)
+    }));
+
+    return { nodes: nodeArray, edges: edgesWithTypes };
+  }, [traces, getTypeFromId]);
 
   const drawSankeyDiagram = () => {
     if (!svgRef.current || !processedData) {return;}

@@ -52,7 +52,7 @@ function RequirementsListControlsComponent({
   searchPlaceholder = 'Search requirements...'
 }: RequirementsListControlsProps) {
   const [searchTerm, setSearchTerm] = useState(search);
-  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const searchDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update local state when props change
   useEffect(() => {
@@ -63,12 +63,12 @@ function RequirementsListControlsComponent({
     setSearchTerm(value);
     
     // Clear existing timer
-    if (searchTimerRef.current) {
-      clearTimeout(searchTimerRef.current);
+    if (searchDebounceTimerRef.current) {
+      clearTimeout(searchDebounceTimerRef.current);
     }
     
     // Set new timer for debounced search
-    searchTimerRef.current = setTimeout(() => {
+    searchDebounceTimerRef.current = setTimeout(() => {
       onSearchChange(value.trim() || undefined);
     }, 300);
   }, [onSearchChange]);
@@ -76,8 +76,8 @@ function RequirementsListControlsComponent({
   // Cleanup timer on unmount
   useEffect(() => {
     return () => {
-      if (searchTimerRef.current) {
-        clearTimeout(searchTimerRef.current);
+      if (searchDebounceTimerRef.current) {
+        clearTimeout(searchDebounceTimerRef.current);
       }
     };
   }, []);

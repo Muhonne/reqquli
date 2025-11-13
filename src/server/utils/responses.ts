@@ -53,24 +53,10 @@ export const successResponse = <T>(
 };
 
 export const badRequest = (res: Response, message: string, details?: any): Response => {
-  // For auth endpoints, use simpler format for backward compatibility
-  const fullPath = (res as any).req?.originalUrl || (res as any).req?.url || '';
-  if (fullPath.startsWith('/api/auth')) {
-    // Special case for resend-verification which expects success field
-    if (fullPath.includes('resend-verification')) {
-      return res.status(400).json({ success: false, message });
-    }
-    return res.status(400).json({ message });
-  }
   return errorResponse(res, 400, 'BAD_REQUEST', message, details);
 };
 
 export const unauthorized = (res: Response, message = 'Authentication required', details?: any): Response => {
-  // For auth endpoints, use simpler format for backward compatibility
-  const fullPath = (res as any).req?.originalUrl || (res as any).req?.url || '';
-  if (fullPath.startsWith('/api/auth')) {
-    return res.status(401).json({ message });
-  }
   return errorResponse(res, 401, 'UNAUTHORIZED', message, details);
 };
 
@@ -83,11 +69,6 @@ export const notFound = (res: Response, message = 'Resource not found', details?
 };
 
 export const conflict = (res: Response, message: string, details?: any): Response => {
-  // For auth endpoints, use simpler format
-  const fullPath = (res as any).req?.originalUrl || (res as any).req?.url || '';
-  if (fullPath.startsWith('/api/auth')) {
-    return res.status(409).json({ message });
-  }
   return errorResponse(res, 409, 'CONFLICT', message, details);
 };
 
@@ -96,11 +77,6 @@ export const unprocessableEntity = (res: Response, message: string, details?: an
 };
 
 export const internalServerError = (res: Response, message = 'Internal server error', details?: any): Response => {
-  // For auth endpoints, use simpler format for backward compatibility
-  const fullPath = (res as any).req?.originalUrl || (res as any).req?.url || '';
-  if (fullPath.startsWith('/api/auth')) {
-    return res.status(500).json({ message });
-  }
   return errorResponse(res, 500, 'INTERNAL_ERROR', message, details);
 };
 

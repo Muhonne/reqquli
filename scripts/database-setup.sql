@@ -121,17 +121,16 @@ CREATE TABLE risk_acceptability_matrix (
 );
 
 -- Unified table for all trace relationships
+-- Types are determined from ID prefixes: UR- (user), SR- (system), RISK- (risk), TC- (testcase), TRES- (testresult)
 CREATE TABLE traces (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     from_requirement_id VARCHAR(20) NOT NULL,
     to_requirement_id VARCHAR(20) NOT NULL,
-    from_type VARCHAR(10) NOT NULL CHECK (from_type IN ('user', 'system', 'testcase', 'testresult', 'risk')),
-    to_type VARCHAR(10) NOT NULL CHECK (to_type IN ('user', 'system', 'testcase', 'testresult', 'risk')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by UUID REFERENCES users(id),
     is_system_generated BOOLEAN DEFAULT FALSE,
-    -- Ensure no duplicate trace relationships
-    UNIQUE(from_requirement_id, to_requirement_id, from_type, to_type)
+    -- Ensure no duplicate trace relationships (simple ID-to-ID relationship)
+    UNIQUE(from_requirement_id, to_requirement_id)
 );
 
 -- Function to prevent deletion of system-generated traces
@@ -174,8 +173,6 @@ CREATE INDEX idx_risk_records_created_by ON risk_records(created_by);
 CREATE INDEX idx_risk_records_residual_score_status ON risk_records(residual_risk_score, status) WHERE deleted_at IS NULL;
 CREATE INDEX idx_risk_records_deleted_status ON risk_records(deleted_at, status);
 CREATE INDEX idx_risk_records_active ON risk_records(deleted_at) WHERE deleted_at IS NULL;
-CREATE INDEX idx_control_measures_risk_record ON control_measures(risk_record_id);
-CREATE INDEX idx_risk_acceptability_matrix_severity_p_total ON risk_acceptability_matrix(severity, p_total);
 
 -- Indexes for traces table
 CREATE INDEX idx_traces_from ON traces(from_requirement_id, from_type);
