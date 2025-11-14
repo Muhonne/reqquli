@@ -359,7 +359,7 @@ export const testRunApi = {
   // Update test case
   updateTestCase: async (testCaseId: string, data: UpdateTestCaseRequest): Promise<UpdateTestCaseResponse> => {
     return fetchApi<UpdateTestCaseResponse>(`/test-cases/${testCaseId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(data),
       // Skip auth redirect when password is provided (for password validation errors)
       skipAuthRedirect: !!data.password

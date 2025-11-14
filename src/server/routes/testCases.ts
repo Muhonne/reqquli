@@ -188,7 +188,7 @@ router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: R
 
   try {
     const { id } = req.params;
-    const { title, description, steps } = req.body;
+    const { title, description, steps, password, linkedRequirements } = req.body;
     const userId = req.user?.userId;
 
     await client.query('BEGIN');
@@ -208,6 +208,34 @@ router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: R
     const testCase = existing.rows[0];
     let newStatus = testCase.status;
     let newRevision = testCase.revision;
+
+    // Password validation: required when editing an approved test case
+    const wasApproved = testCase.status === 'approved';
+    
+    if (wasApproved && !password) {
+      await client.query('ROLLBACK');
+      return badRequest(res, "Password required to edit approved test case");
+    }
+
+    if (wasApproved && password) {
+      const bcrypt = require('bcrypt');
+      const userQuery = `
+        SELECT password_hash FROM users WHERE id = $1
+      `;
+      const userResult = await client.query(userQuery, [userId]);
+
+      if (userResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return unauthorized(res, "User not found");
+      }
+
+      const isValid = await bcrypt.compare(password, userResult.rows[0].password_hash);
+
+      if (!isValid) {
+        await client.query('ROLLBACK');
+        return unauthorized(res, "Invalid password");
+      }
+    }
 
     // Reset to draft if approved and being edited
     if (testCase.status === 'approved') {
@@ -261,6 +289,26 @@ router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: R
       }
     }
 
+    // Update linked requirements (traces) if provided
+    if (linkedRequirements !== undefined) {
+      // Delete existing traces to this test case
+      await client.query(
+        'DELETE FROM traces WHERE to_requirement_id = $1',
+        [id]
+      );
+
+      // Create new traces
+      for (const reqId of linkedRequirements) {
+        await client.query(
+          `INSERT INTO traces (
+            from_requirement_id, to_requirement_id, created_by, created_at
+          ) VALUES ($1, $2, $3, NOW())
+          ON CONFLICT (from_requirement_id, to_requirement_id) DO NOTHING`,
+          [reqId, id, userId]
+        );
+      }
+    }
+
     // Log audit event
     await logAuditEvent(
       client,
@@ -278,9 +326,24 @@ router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: R
 
     await client.query('COMMIT');
 
+    // Fetch updated steps (after commit, use pool directly to avoid transaction issues)
+    const stepsQuery = `
+      SELECT
+        id,
+        test_case_id,
+        step_number,
+        action as description,
+        expected_result
+      FROM testing.test_steps
+      WHERE test_case_id = $1
+      ORDER BY step_number
+    `;
+    const stepsResult = await pool.query(stepsQuery, [id]);
+
     res.json({
       success: true,
-      testCase: result.rows[0]
+      testCase: result.rows[0],
+      steps: stepsResult.rows
     });
   } catch (error) {
     await client.query('ROLLBACK');

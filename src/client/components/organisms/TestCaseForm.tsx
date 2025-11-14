@@ -325,7 +325,7 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
         });
         navigate(`/test-cases/${newTestCase.id}`);
       } else if (testCase) {
-        // Update existing test case (only for draft status)
+        // Update existing test case
         await updateTestCase(testCase.id, {
           title: title.trim(),
           description: description.trim(),
@@ -335,11 +335,14 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
         setIsEditing(false);
         // Reset the initialized ref after successful update
         initializedRef.current = null;
+        // Refresh test cases to get updated data
+        await fetchTestCases();
       }
     } catch {
       // Error saving test case - validation or network error
+      // Error is handled by the store
     }
-  }, [isCreateMode, isEditing, testCase, title, description, steps, linkedRequirements, createTestCase, updateTestCase, navigate, validateForm]);
+  }, [isCreateMode, isEditing, testCase, title, description, steps, linkedRequirements, createTestCase, updateTestCase, navigate, validateForm, fetchTestCases]);
 
   const handleCreateAndApprove = useCallback(async (password: string) => {
     // Use approval service to create and approve in one operation

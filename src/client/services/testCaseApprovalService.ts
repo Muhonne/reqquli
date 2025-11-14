@@ -56,22 +56,20 @@ export const testCaseApprovalService = {
       linkedRequirements
     };
 
-    // If it was already approved, include password in update
+    // If it was already approved, include password in update to revert to draft
     if (wasApproved) {
       updateData.password = password;
     }
 
-    const updateResponse = await testRunApi.updateTestCase(id, updateData);
+    // Update the test case (will revert to draft if was approved)
+    await testRunApi.updateTestCase(id, updateData);
 
-    // If it wasn't approved before, approve it now
-    if (!wasApproved) {
-      const approveResponse = await testRunApi.approveTestCase(id, {
-        password
-      });
-      return approveResponse.testCase;
-    }
-
-    return updateResponse.testCase;
+    // Always approve after update (this is "Save & Approve" operation)
+    const approveResponse = await testRunApi.approveTestCase(id, {
+      password
+    });
+    
+    return approveResponse.testCase;
   },
 
   // Approve Test Case Only
