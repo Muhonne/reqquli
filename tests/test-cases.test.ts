@@ -223,11 +223,12 @@ describe('Test Case Management API', () => {
         }
       );
 
-      // Edit it
+      // Edit it (requires password for approved test case)
       const editRes = await axios.patch(
         `${API_URL}/api/test-cases/${tcId}`,
         {
-          description: 'Edited after approval'
+          description: 'Edited after approval',
+          password: 'salasana!123'
         },
         {
           headers: { Authorization: `Bearer ${authToken}` }
@@ -236,8 +237,8 @@ describe('Test Case Management API', () => {
 
       expect(editRes.status).toBe(200);
       expect(editRes.data.testCase.status).toBe('draft');
-      // Test cases increment revision when editing approved (1 -> 2)
-      expect(editRes.data.testCase.revision).toBe(2);
+      // Revision does NOT increment on edit - only on approval (per approval-workflow.md)
+      expect(editRes.data.testCase.revision).toBe(1);
     });
   });
 
@@ -364,7 +365,7 @@ describe('Test Case Management API', () => {
       expect(approveRes.data.testCase.status).toBe('approved');
     });
 
-    it('should increment revision when editing approved test case (1 -> 2)', async () => {
+    it('should NOT increment revision when editing approved test case (revision remains 1)', async () => {
       // Create and approve
       const createRes = await axios.post(
         `${API_URL}/api/test-cases`,
@@ -390,22 +391,24 @@ describe('Test Case Management API', () => {
         }
       );
 
-      // Edit (should increment revision AND reset to draft)
+      // Edit (should reset to draft, revision remains unchanged)
       const editRes = await axios.patch(
         `${API_URL}/api/test-cases/${tcId}`,
         {
-          description: 'Edited description that should increment revision.'
+          description: 'Edited description. Revision should remain unchanged.',
+          password: 'salasana!123'
         },
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
 
-      expect(editRes.data.testCase.revision).toBe(2);
+      // Revision does NOT increment on edit - only on approval (per approval-workflow.md)
+      expect(editRes.data.testCase.revision).toBe(1);
       expect(editRes.data.testCase.status).toBe('draft');
     });
 
-    it('should increment revision on re-approval after edit (2 -> 3)', async () => {
+    it('should increment revision on re-approval after edit (1 -> 2)', async () => {
       // Create, approve, edit
       const createRes = await axios.post(
         `${API_URL}/api/test-cases`,
@@ -431,18 +434,19 @@ describe('Test Case Management API', () => {
         }
       );
 
-      // Edit (increments revision: 1 -> 2, resets to draft)
+      // Edit (revision remains 1, resets to draft)
       await axios.patch(
         `${API_URL}/api/test-cases/${tcId}`,
         {
-          description: 'Edited to test re-approval revision increment.'
+          description: 'Edited to test re-approval revision increment.',
+          password: 'salasana!123'
         },
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
 
-      // Re-approve (2 -> 3)
+      // Re-approve (1 -> 2)
       const reapproveRes = await axios.put(
         `${API_URL}/api/test-cases/${tcId}/approve`,
         {
@@ -453,7 +457,7 @@ describe('Test Case Management API', () => {
         }
       );
 
-      expect(reapproveRes.data.testCase.revision).toBe(3);
+      expect(reapproveRes.data.testCase.revision).toBe(2);
       expect(reapproveRes.data.testCase.status).toBe('approved');
     });
 
@@ -483,17 +487,18 @@ describe('Test Case Management API', () => {
         }
       );
 
-      // Edit (increments: 1 -> 2, resets to draft)
+      // Edit (revision remains 1, resets to draft)
       await axios.patch(
         `${API_URL}/api/test-cases/${tcId}`,
         {
-          description: 'First edit cycle.'
+          description: 'First edit cycle.',
+          password: 'salasana!123'
         },
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
-      // Re-approve (2 -> 3)
+      // Re-approve (1 -> 2)
       await axios.put(
         `${API_URL}/api/test-cases/${tcId}/approve`,
         {
@@ -504,17 +509,18 @@ describe('Test Case Management API', () => {
         }
       );
 
-      // Second edit (increments: 3 -> 4, resets to draft)
+      // Second edit (revision remains 2, resets to draft)
       await axios.patch(
         `${API_URL}/api/test-cases/${tcId}`,
         {
-          description: 'Second edit cycle.'
+          description: 'Second edit cycle.',
+          password: 'salasana!123'
         },
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
-      // Final re-approve (4 -> 5)
+      // Final re-approve (2 -> 3)
       const finalApproveRes = await axios.put(
         `${API_URL}/api/test-cases/${tcId}/approve`,
         {
@@ -525,7 +531,7 @@ describe('Test Case Management API', () => {
         }
       );
 
-      expect(finalApproveRes.data.testCase.revision).toBe(5);
+      expect(finalApproveRes.data.testCase.revision).toBe(3);
       expect(finalApproveRes.data.testCase.status).toBe('approved');
     });
 

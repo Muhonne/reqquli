@@ -238,9 +238,11 @@ router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: R
     }
 
     // Reset to draft if approved and being edited
+    // Revision does NOT increment on edit - only on approval (per approval-workflow.md)
     if (testCase.status === 'approved') {
       newStatus = 'draft';
-      newRevision = testCase.revision + 1;
+      // Revision remains unchanged when editing approved items
+      newRevision = testCase.revision;
     }
 
     // Update test case
