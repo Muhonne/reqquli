@@ -146,14 +146,18 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
     if (!requirement) {return}
 
     // Update requirement with password to revert to draft
-    await actions.updateRequirement(requirement.id, {
+    const updatedRequirement = await actions.updateRequirement(requirement.id, {
       title: requirement.title,
       description: requirement.description,
       password
     })
+    // Update local requirement state with the updated requirement
+    setRequirement(updatedRequirement)
     // Only switch to edit mode if the update was successful
     setIsEditing(true)
     setShowPasswordConfirm(false)
+    // Refresh requirements list to get updated data
+    await actions.fetchRequirements()
   }, [requirement, actions])
 
   const handleCancel = useCallback(() => {
@@ -241,6 +245,8 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
         // Explicitly sync the requirement state to ensure it's updated
         setRequirement(updatedRequirement)
         setIsEditing(false)
+        // Refresh requirements list to get updated data
+        await actions.fetchRequirements()
       } catch (error) {
         // Error handling is done by the API service
         // Stay in edit mode on error so user can retry

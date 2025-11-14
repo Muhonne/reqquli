@@ -41,16 +41,39 @@ export const approvalService = {
     password: string,
     approvalNotes?: string
   ) => {
-    const data: UpdateUserRequirementRequest = {
-      title,
-      description,
-      status: 'approved',
-      password,
-      approvalNotes
-    };
+    // First, get the current requirement to check if it's already approved
+    const currentRequirement = await userRequirementApi.get(id);
+    const wasApproved = currentRequirement.requirement.status === 'approved';
     
-    const response = await userRequirementApi.update(id, data);
-    return response.requirement;
+    // If it was already approved, we need to update it first (which resets to draft)
+    // then approve it separately
+    if (wasApproved) {
+      // Update the requirement (resets to draft)
+      await userRequirementApi.update(id, {
+        title,
+        description,
+        password
+      });
+      
+      // Then approve it
+      const approveResponse = await userRequirementApi.approve(id, {
+        password,
+        approvalNotes
+      });
+      return approveResponse.requirement;
+    } else {
+      // If it wasn't approved, update with status: 'approved' in one operation
+      const data: UpdateUserRequirementRequest = {
+        title,
+        description,
+        status: 'approved',
+        password,
+        approvalNotes
+      };
+      
+      const response = await userRequirementApi.update(id, data);
+      return response.requirement;
+    }
   },
 
   approveUserRequirement: async (
@@ -91,16 +114,39 @@ export const approvalService = {
     password: string,
     approvalNotes?: string
   ) => {
-    const data: UpdateSystemRequirementRequest = {
-      title,
-      description,
-      status: 'approved',
-      password,
-      approvalNotes
-    };
+    // First, get the current requirement to check if it's already approved
+    const currentRequirement = await systemRequirementApi.get(id);
+    const wasApproved = currentRequirement.requirement.status === 'approved';
     
-    const response = await systemRequirementApi.update(id, data);
-    return response.requirement;
+    // If it was already approved, we need to update it first (which resets to draft)
+    // then approve it separately
+    if (wasApproved) {
+      // Update the requirement (resets to draft)
+      await systemRequirementApi.update(id, {
+        title,
+        description,
+        password
+      });
+      
+      // Then approve it
+      const approveResponse = await systemRequirementApi.approve(id, {
+        password,
+        approvalNotes
+      });
+      return approveResponse.requirement;
+    } else {
+      // If it wasn't approved, update with status: 'approved' in one operation
+      const data: UpdateSystemRequirementRequest = {
+        title,
+        description,
+        status: 'approved',
+        password,
+        approvalNotes
+      };
+      
+      const response = await systemRequirementApi.update(id, data);
+      return response.requirement;
+    }
   },
 
   approveSystemRequirement: async (

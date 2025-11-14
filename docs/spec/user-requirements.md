@@ -2,9 +2,11 @@
 
 **Feature Name:** User Requirements Management
 
-**Feature Description:** A comprehensive user requirements management system for regulatory compliance development that enables creation, editing, approval, and browsing of user requirements. This feature ensures all user requirements follow proper approval workflows and maintain compliance through controlled revision management.
+**Feature Description:** A comprehensive user requirements management system for regulatory compliance development that enables creation, editing, and browsing of user requirements with full traceability to system requirements.
 
-**Goal:** Enable 100% traceability of user requirements from creation through approval, ensuring all requirements are properly reviewed before implementation .
+**Goal:** Enable 100% traceability of user requirements, ensuring all requirements are properly documented and traceable to system requirements.
+
+**Note:** The approval workflow (draft/approved status, revision tracking, password confirmation, etc.) is defined in `approval-workflow.md` and applies consistently to User Requirements. This specification focuses on User Requirements content (title, description) and traceability relationships.
 
 ## 2. Functional Requirements (User Behaviors)
 
@@ -13,13 +15,7 @@ This section uses Gherkin syntax to describe the feature's behavior from the use
 ```gherkin
 Feature: User Requirements Management
 
-Scenario: Browse User Requirements
-  Given I am a logged-in user
-  When I navigate to the user requirements list page
-  Then I see a list of all user requirements
-  And each requirement displays its ID, title, status, and revision number
-  And I can filter requirements by status (draft, approved)
-  And I can sort requirements by ID, title, or created date
+Note: List browsing functionality (search, sort, filter, pagination) is defined in `item-list.md` and applies to User Requirements.
 
 Scenario: Create New User Requirement
   Given I am a logged-in user
@@ -28,28 +24,20 @@ Scenario: Create New User Requirement
   And I fill in the requirement title "System Login"
   And I fill in the requirement description with complete details
   And I click "Save"
-  Then a new user requirement is created with status "draft"
-  And the requirement has revision number "0"
+  Then a new user requirement is created
+  And the requirement contains the title and description I entered
   And the requirement can have traces added separately
+  Note: Approval workflow (status, revision) follows `approval-workflow.md`
 
-Scenario: Approve User Requirement
+Scenario: View User Requirement Traces
   Given I am a logged-in user
-  And there is a user requirement "UR-1" not in "approved" status
-  When I navigate to the requirement details page
-  And I click "Approve"
-  And I confirm the approval with my password
-  Then the requirement status changes to "approved"
-  And the revision number increments to "1"
-
-Scenario: Edit Approved User Requirement
-  Given I am a logged-in user
-  And there is an approved user requirement "UR-1" with status "approved" and revision "1"
-  When I navigate to the requirement details page
-  And I click "Edit"
-  And I modify the requirement description
-  And I click "Save Changes"
-  Then the requirement status changes to "draft"
-  And the revision number remains at "1" (revision only increments on approval, never on edit)
+  And there is a user requirement "UR-1" with downstream system requirements
+  When I navigate to the "UR-1" details page
+  Then I see the requirement title and description
+  And I see a "Downstream Traces" section
+  And I see all system requirements that trace from this user requirement
+  And each traced system requirement shows its ID and title
+  And I can click on any traced system requirement to navigate to its details
 ```
 
 ## 3. Technical Requirements
@@ -58,13 +46,11 @@ This section details the engineering work for each Gherkin scenario. For detaile
 
 ### 3.1 Backend Functionality
 
-**Browse Operations:** Implements filtering, sorting, and pagination for user requirements list as defined in "Browse User Requirements" scenario.
+**Browse Operations:** Implements the ItemList functionality as defined in `item-list.md` (search, sort, filter, pagination).
 
-**CRUD Operations:** Handles create, update operations with state management as defined in "Create New User Requirement" and "Edit Approved User Requirement" scenarios.
+**CRUD Operations:** Handles create, update, and read operations for user requirements. Approval workflow follows `approval-workflow.md`.
 
-**Approval Workflow:** Implements secure approval process with password confirmation and revision tracking as defined in "Approve User Requirement" scenario.
-
-**Traceability Management:** Manages trace relationships through traces junction table, allowing many-to-many relationships between requirements.
+**Traceability Management:** Manages trace relationships through traces junction table, allowing many-to-many relationships between user requirements and system requirements.
 
 **Validation Requirements:**
 - Title uniqueness and length constraints (as defined in CONTEXT.md business rules)
@@ -74,23 +60,21 @@ This section details the engineering work for each Gherkin scenario. For detaile
 - Request rate limiting for resource protection
 
 **Business Logic:**
-- Draft status on creation with revision 0
-- Status reset to draft when approved requirements are edited
-- Revision increment only occurs on approval, never on edit
-- Traces managed separately through traces table
+- Approval workflow follows the rules defined in `approval-workflow.md`
+- Traces managed separately through traces table (see `trace_editing.md`)
 - Soft delete implementation with deletedAt timestamps
 
 ### 3.2 Frontend Functionality
 
 **UI Components:**
-- **Requirements List View:** Filterable, sortable table with pagination showing all user requirements
-- **Requirement Create Form:** Multi-field form with validation 
-- **Requirement Detail View:** Read-only view with full requirement details, showing downstream system requirements that trace from this requirement
-- **Requirement Edit Form:** Editable form with change tracking and validation
-- **Approval Interface:** Secure approval workflow with password confirmation
-- **Trace Management:** Separate interface for managing trace relationships through traces table
+- **Requirements List View:** Uses ItemList component as defined in `item-list.md` for browsing, searching, sorting, filtering, and pagination
+- **Requirement Create Form:** Multi-field form with validation for title and description
+- **Requirement Detail View:** Read-only view with full requirement details (title, description), showing downstream system requirements that trace from this requirement
+- **Requirement Edit Form:** Editable form with change tracking and validation for title and description
+- **Approval Interface:** Implements the approval workflow UI as defined in `approval-workflow.md`
+- **Trace Management:** Separate interface for managing trace relationships through traces table (see `trace_editing.md`)
 
-**Associated Behavior:** Implements complete CRUD operations with approval workflow and proper state management.
+**Associated Behavior:** Implements CRUD operations for requirement content and traceability management.
 
 ### 3.3 Database Design
 
@@ -112,15 +96,16 @@ This section details the engineering work for each Gherkin scenario. For detaile
 ## 4. Manual Verification Protocol
 
 ### Test Case 1: Browse User Requirements
-*Maps to "Browse User Requirements" scenario*
+*Maps to ItemList functionality defined in `item-list.md`*
+
+Refer to `item-list.md` Test Cases 1-6 for comprehensive list browsing, searching, sorting, filtering, and pagination testing. This test case verifies basic list display:
 
 1. **Step 1:** Login as user
 2. **Step 2:** Navigate to User Requirements page
-3. **Step 3:** Verify list displays with proper columns
-4. **Step 4:** Test filtering by each status type
-5. **Step 5:** Test sorting by different columns
+3. **Step 3:** Verify list displays with proper columns (ID, title, etc.)
+4. **Step 4:** Verify User Requirements-specific content is displayed correctly
 
-**Expected Result:** List displays correctly with functional filtering and sorting.
+**Expected Result:** List displays correctly with User Requirements content. For complete list functionality testing, see `item-list.md`.
 
 ### Test Case 2: Create New User Requirement
 *Maps to "Create New User Requirement" scenario*
@@ -129,30 +114,18 @@ This section details the engineering work for each Gherkin scenario. For detaile
 2. **Step 2:** Click "Create New Requirement"
 3. **Step 3:** Fill all required fields (title and description)
 4. **Step 4:** Save the requirement
-5. **Step 5:** Verify requirement created with status=draft, revision=0
+5. **Step 5:** Verify requirement created with correct title and description
 
-**Expected Result:** Requirement created in draft status with proper initial values. Traces can be added separately.
+**Expected Result:** Requirement created with proper content. Traces can be added separately. For approval workflow testing, see `approval-workflow.md`.
 
-### Test Case 3: Approve User Requirement
-*Maps to "Approve User Requirement" scenario*
-
-1. **Step 1:** Login as user
-2. **Step 2:** Select draft requirement
-3. **Step 3:** Click approve
-4. **Step 4:** Confirm with password
-5. **Step 5:** Verify status="approved" and revision=1
-
-**Expected Result:** Requirement approved with incremented revision.
-
-### Test Case 4: Edit Approved Requirement
-*Maps to "Edit Approved User Requirement" scenario*
+### Test Case 3: View User Requirement Traces
+*Maps to "View User Requirement Traces" scenario*
 
 1. **Step 1:** Login as user
-2. **Step 2:** Select approved requirement (with revision=1)
-3. **Step 3:** Edit and save changes
-4. **Step 4:** Verify status="draft"
-5. **Step 5:** Verify revision number remains at 1 (unchanged by edit)
-6. **Step 6:** Re-approve the requirement
-7. **Step 7:** Verify revision number increments to 2
+2. **Step 2:** Navigate to a user requirement with downstream traces
+3. **Step 3:** Verify requirement title and description are displayed
+4. **Step 4:** Verify downstream traces section shows linked system requirements
+5. **Step 5:** Click on a traced system requirement
+6. **Step 6:** Verify navigation to system requirement details page
 
-**Expected Result:** Requirement returns to draft status with revision unchanged, then increments to 2 upon re-approval. Trace relationships remain unchanged in traces table.
+**Expected Result:** Requirement content and trace relationships display correctly. For trace management testing, see `trace_editing.md`.

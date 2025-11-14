@@ -6,6 +6,8 @@
 
 **Goal:** Provide a comprehensive, auditable system for managing medical device risk from initial hazard identification through overall residual risk review, ensuring **full traceability** from Hazard → Harm → Risk Estimate → Control Measures → Residual Risk.
 
+**Note:** Risk Records use the unified approval workflow defined in `approval-workflow.md` (draft/approved status, revision tracking, password confirmation, etc.). Risk Records also have risk-specific statuses (control_required, residual_risk_acceptable, overall_review_complete) that are separate from the approval workflow. This specification focuses on Risk Records-specific functionality.
+
 ---
 
 ## 2. Functional Requirements (User Behaviors)
@@ -15,13 +17,7 @@ This section uses Gherkin syntax to describe the feature's behavior from the use
 ```gherkin
 Feature: Risk and Hazard Management (ISO 14971 Compliance)
 
-Scenario: Browse Risks and Hazards
-  Given I am a logged-in Risk Manager
-  When I navigate to the risk management list page
-  Then I see a list of all identified hazards and their associated risks
-  And each risk displays its ID, associated harm, Initial Risk (Severity x P_total), and Residual Risk
-  And I can filter requirements by status (draft, approved)
-  And I can sort risks by ID, title, or created date
+Note: List browsing functionality (search, sort, filter, pagination) is defined in `item-list.md` and applies to Risk Records. Risk Records display risk-specific information (harm, Initial Risk, Residual Risk) in the list view.
 
 Scenario: Identify and Estimate New Risk
   Given I am a logged-in user with risk creation permissions
@@ -81,7 +77,9 @@ This section details the engineering work for each Gherkin scenario. For detaile
 
 **CRUD Operations:** Handles create, update, and read operations for Risk Records, Control Measures, and the associated Hazard/Harm details.
 
-**State Management:** Manages the lifecycle status of a risk (e.g., Draft, Control Required, Residual Risk Acceptable, Overall Review Complete).
+**State Management:** 
+- Approval workflow follows the rules defined in `approval-workflow.md` (draft/approved status, revision tracking)
+- Risk-specific lifecycle statuses (e.g., Control Required, Residual Risk Acceptable, Overall Review Complete) are managed separately and indicate risk assessment progress
 
 **Traceability Management:** Extends the existing `traces` junction table to allow many-to-many relationships between `Risk Records` and **System Requirements** (as the control measure implementation).
 
@@ -107,7 +105,7 @@ This section details the engineering work for each Gherkin scenario. For detaile
 
 **UI Components:**
 * **Risk Matrix Configuration View:** Read-only view of the organization's Risk Acceptability Matrix.
-* **Risk/Hazard List View:** Filterable, sortable table displaying initial and residual risk scores.
+* **Risk/Hazard List View:** Uses ItemList component as defined in `item-list.md` for browsing, searching, sorting, filtering, and pagination. Displays risk-specific information (harm, Initial Risk, Residual Risk) in the list view.
 * **Risk Record Detail View:** Dedicated view for **Hazard identification**, **Harm definition**, **Risk Estimation** (with individual probabilities P₁, P₂, Total Probability P_total calculation method, and resulting risk score), **Control Measure documentation**, and **Residual Risk estimation**.
 * **Control Measure Traceability:** Interface to link Control Measures to existing System Requirements.
 
@@ -264,8 +262,8 @@ This section provides a detailed implementation roadmap for the Risk and Hazard 
    - `GET /api/risks/:id/downstream-traces` - Get system requirements linked as control measures
 
 **Step 2.3: Implement CRUD Operations**
-1. Implement list endpoint with:
-   - Status filtering (draft, control_required, residual_risk_acceptable)
+1. Implement list endpoint following `item-list.md` specifications:
+   - Status filtering (draft, approved for approval workflow; control_required, residual_risk_acceptable for risk lifecycle)
    - Sorting by ID, title, created date, risk score
    - Pagination support
    - Search functionality
@@ -280,11 +278,10 @@ This section provides a detailed implementation roadmap for the Risk and Hazard 
    - Recalculation of P_total if P₁ or P₂ changed
    - Recalculation of risk scores
    - Status update logic
-   - Revision tracking (increment only on approval)
+   - Revision tracking follows `approval-workflow.md` rules (increment only on approval)
 4. Implement approve endpoint with:
    - Password verification
-   - Revision increment
-   - Status update to approved state
+   - Approval workflow follows `approval-workflow.md` (revision increment, status update to approved state)
    - Audit trail logging
 
 **Step 2.4: Implement Control Measures Management**
@@ -330,12 +327,10 @@ This section provides a detailed implementation roadmap for the Risk and Hazard 
    - Use TypeScript types from `src/types/risks.ts`
 
 **Step 3.3: Create Risk List Components**
-1. Create `src/client/components/organisms/RiskList.tsx`:
-   - Display risk records in table format
+1. Use ItemList component as defined in `item-list.md`:
+   - Display risk records using ItemList component
    - Show ID, title, harm, severity, P_total, initial risk score, residual risk score, status
-   - Implement filtering by status
-   - Implement sorting by ID, title, created date, risk score
-   - Add pagination controls
+   - Filtering, sorting, and pagination handled by ItemList component
 2. Create `src/client/components/molecules/RiskListItem.tsx`:
    - Individual risk row component
    - Display risk information with proper formatting
@@ -387,11 +382,12 @@ This section provides a detailed implementation roadmap for the Risk and Hazard 
    - Tooltip showing exact values
 
 **Step 3.8: Create Approval Interface**
-1. Create `src/client/components/molecules/RiskApprovalDialog.tsx`:
-   - Password confirmation input
+1. Implement the approval workflow UI as defined in `approval-workflow.md`:
+   - Password confirmation modal
+   - Save/Save & Approve buttons with proper state management
    - Approval notes text area
-   - Approve and cancel actions
-2. Integrate approval dialog into RiskDetailPage
+   - Cancel behavior (does not revert approved items back to approved status)
+2. Integrate approval interface into RiskDetailPage
 
 **Step 3.9: Add Routing**
 1. Update `src/client/main.tsx` routing:
@@ -418,7 +414,7 @@ This section provides a detailed implementation roadmap for the Risk and Hazard 
 **Step 4.2: API Integration Tests**
 1. Extend `tests/risks.test.ts`:
    - Test all CRUD endpoints
-   - Test approval workflow
+   - Test approval workflow (see `approval-workflow.md` for comprehensive test cases)
    - Test control measures management
    - Test risk matrix configuration
    - Test traceability to system requirements
@@ -430,9 +426,9 @@ This section provides a detailed implementation roadmap for the Risk and Hazard 
    - Test risk creation flow
    - Test risk estimation with P₁, P₂, P_total
    - Test control measure addition
-   - Test risk approval workflow
+   - Test risk approval workflow (see `approval-workflow.md` for comprehensive test cases)
    - Test risk-to-SR traceability
-   - Test filtering and sorting
+   - Test filtering and sorting (see `item-list.md` for comprehensive test cases)
    - Use direct URL navigation for reliability
 
 **Step 4.4: Integration with Existing Features**
