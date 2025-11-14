@@ -98,28 +98,6 @@ CREATE TABLE risk_records (
     deleted_at TIMESTAMP WITH TIME ZONE
 );
 
--- Control Measures
-CREATE TABLE control_measures (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    risk_record_id VARCHAR(20) NOT NULL REFERENCES risk_records(id) ON DELETE CASCADE,
-    description TEXT NOT NULL,
-    control_type VARCHAR(20) NOT NULL CHECK (control_type IN ('design', 'protective', 'information')),
-    effectiveness TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID REFERENCES users(id)
-);
-
--- Risk Acceptability Matrix
-CREATE TABLE risk_acceptability_matrix (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    severity INTEGER NOT NULL CHECK (severity >= 1 AND severity <= 5),
-    p_total INTEGER NOT NULL CHECK (p_total >= 1 AND p_total <= 5),
-    acceptability VARCHAR(20) NOT NULL CHECK (acceptability IN ('acceptable', 'unacceptable')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE,
-    UNIQUE(severity, p_total)
-);
-
 -- Unified table for all trace relationships
 -- Types are determined from ID prefixes: UR- (user), SR- (system), RISK- (risk), TC- (testcase), TRES- (testresult)
 CREATE TABLE traces (
