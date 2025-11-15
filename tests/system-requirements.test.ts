@@ -68,8 +68,6 @@ describe('System Requirements API', () => {
         {
           fromId: testUserReqId,
           toId: testSystemReqId,
-          fromType: 'user',
-          toType: 'system'
         },
         {
           headers: { Authorization: `Bearer ${authToken}` }
@@ -156,8 +154,6 @@ describe('System Requirements API', () => {
         {
           fromId: draftURId,
           toId: srId,
-          fromType: 'user',
-          toType: 'system'
         },
         {
           headers: { Authorization: `Bearer ${authToken}` }
@@ -326,8 +322,6 @@ describe('System Requirements API', () => {
         {
           fromId: altURId,
           toId: newSRId,
-          fromType: 'user',
-          toType: 'system'
         },
         {
           headers: { Authorization: `Bearer ${authToken}` }

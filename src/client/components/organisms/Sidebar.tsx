@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { GitBranch, FileText, Settings, TestTube, CheckSquare, Activity } from 'lucide-react'
+import { GitBranch, FileText, Settings, TestTube, CheckSquare, Activity, AlertTriangle } from 'lucide-react'
 import { UserSessionBox } from '../molecules/UserSessionBox'
 import { ListItemStyle } from '../atoms'
 
@@ -11,6 +11,7 @@ export function Sidebar() {
     { label: 'Traceability', path: '/', icon: GitBranch },
     { label: 'User Requirements', path: '/user-requirements', icon: FileText },
     { label: 'System Requirements', path: '/system-requirements', icon: Settings },
+    { label: 'Risk Management', path: '/risks', icon: AlertTriangle },
     { label: 'Test Cases', path: '/test-cases', icon: TestTube },
     { label: 'Test Runs', path: '/test-runs', icon: CheckSquare }
   ]
@@ -34,6 +35,7 @@ export function Sidebar() {
             const isActive = location.pathname === item.path ||
                            (item.path === '/user-requirements' && location.pathname.startsWith('/user-requirements/')) ||
                            (item.path === '/system-requirements' && location.pathname.startsWith('/system-requirements/')) ||
+                           (item.path === '/risks' && location.pathname.startsWith('/risks/')) ||
                            (item.path === '/test-cases' && location.pathname.startsWith('/test-cases/')) ||
                            (item.path === '/test-runs' && location.pathname.startsWith('/test-runs/'))
             return (

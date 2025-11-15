@@ -6,6 +6,8 @@
 
 **Goal:** Enable systematic manual testing with clear pass/fail criteria at each level, re-run capabilities, and complete requirement traceability.
 
+**Note:** Test Runs use the unified approval workflow defined in `approval-workflow.md` for approving completed test runs (password confirmation, status transitions, etc.). This specification focuses on Test Run-specific functionality (execution, result calculation, etc.).
+
 ## 2. Functional requirements (User Behaviors)
 
 ```gherkin
@@ -57,15 +59,6 @@ Scenario: Determine test run result from test case results
   When any test case has status "fail"
   Then the test run status shows "fail"
 
-Scenario: Approve a completed test run
-  Given all test cases in my test run have been executed
-  And the overall test run status is determined
-  When I review the complete results
-  And I click "Approve Test Run"
-  Then I am prompted to confirm with password
-  Then the test run is marked as "approved"
-  And no further changes to test results are allowed
-  And the approval timestamp and approver are recorded
 
 Scenario: View traceability from requirement to test result
   Given an approved test run exists
@@ -87,7 +80,7 @@ Scenario: View traceability from requirement to test result
 
 - `GET /api/test-runs/:run_id`: Retrieve test run details including all test cases, their current execution status, and calculated results.
 
-- `PUT /api/test-runs/:run_id/approve`: Approve a completed test run. requires password confirmation. Validates that all test cases have been executed and locks the run from further modifications.
+- `PUT /api/test-runs/:run_id/approve`: Approve a completed test run. Implements the approval workflow as defined in `approval-workflow.md`. Validates that all test cases have been executed and locks the run from further modifications.
 
 - `GET /api/test-cases`: List available test cases for selection when creating a test run, filtered by status="approved".
 
@@ -184,10 +177,8 @@ Note: Test case links to system requirements are managed through the unified tra
 5. Verify test run shows as "Failed"
 6. Re-run the failed test case with all steps passing
 7. Verify test run now shows as "Passed"
-8. Approve the test run
-9. Verify no further changes are possible
 
-**Expected Result:** Test run status correctly reflects the aggregate of test case results, re-runs work properly, and approval locks the results.
+**Expected Result:** Test run status correctly reflects the aggregate of test case results, re-runs work properly. For approval workflow testing, see `approval-workflow.md`.
 
 **Test Case 2: Traceability Verification**
 1. Create a system requirement

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  RequirementList,
+  ItemList,
   RequirementForm,
   RequirementsListControls
 } from '../organisms';
@@ -89,34 +89,33 @@ export function SystemRequirementsPage() {
 
 
   const leftPanel = useMemo(() => (
-    <div className="flex flex-col h-full">
-      <RequirementList
-        requirements={requirements || []}
-        onSelectRequirement={handleSelectRequirement}
-        onCreateNew={handleCreateNew}
-        loading={loading}
-        selectedId={id || null}
-        sortBy={filters?.sort}
-        title="System Requirements"
-        requirementType="system"
-        filters={
-          <RequirementsListControls
-            search={filters?.search}
-            status={filters?.status}
-            totalCount={pagination?.total || 0}
-            onSearchChange={handleSearchChange}
-            onStatusChange={handleStatusChange}
-            sortBy={filters?.sort}
-            sortOrder={filters?.order}
-            onSortChange={handleSortChange}
-            currentPage={pagination?.page || 1}
-            totalPages={pagination?.pages || 1}
-            onPageChange={handlePageChange}
-            loading={loading}
-          />
-        }
-      />
-    </div>
+    <ItemList
+      items={requirements || []}
+      onSelectItem={handleSelectRequirement}
+      onCreateNew={handleCreateNew}
+      loading={loading}
+      selectedId={id || null}
+      sortBy={filters?.sort}
+      title="System Requirements"
+      itemType="system"
+      totalCount={pagination?.total}
+      filters={
+        <RequirementsListControls
+          search={filters?.search}
+          status={filters?.status}
+          totalCount={pagination?.total || 0}
+          onSearchChange={handleSearchChange}
+          onStatusChange={handleStatusChange}
+          sortBy={filters?.sort}
+          sortOrder={filters?.order}
+          onSortChange={handleSortChange}
+          currentPage={pagination?.page || 1}
+          totalPages={pagination?.pages || 1}
+          onPageChange={handlePageChange}
+          loading={loading}
+        />
+      }
+    />
   ), [
     requirements,
     handleSelectRequirement,
@@ -180,7 +179,7 @@ export function SystemRequirementsPage() {
           </div>
         );
     }
-  }, [error, clearError, viewMode, id]);
+  }, [error, clearError, viewMode]);
 
   return (
     <AppLayout>

@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppLayout, SplitPanelLayout } from '../templates';
 import { Button, Text, Stack } from '../atoms';
-import { RequirementList } from '../organisms/RequirementList';
+import { ItemList } from '../organisms/ItemList';
 import { TestCaseForm } from '../organisms/TestCaseForm';
 import { RequirementsListControls } from '../organisms/RequirementsListControls';
 import useTestRunStore from '../../stores/testRunStore';
+import { TestCase } from '../../../types/test-runs';
 
-type ViewMode = 'none' | 'detail' | 'create';
+type ViewMode = 'none' | 'detail' | 'create' | 'edit';
 
 export function TestCasesPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +29,7 @@ export function TestCasesPage() {
   // Initial fetch
   useEffect(() => {
     fetchTestCases();
-  }, []);
+  }, [fetchTestCases]);
 
   useEffect(() => {
     if (id === 'new') {
@@ -40,7 +41,7 @@ export function TestCasesPage() {
     }
   }, [id]);
 
-  const handleSelectTestCase = useCallback((item: any) => {
+  const handleSelectTestCase = useCallback((item: TestCase) => {
     navigate(`/test-cases/${item.id}`);
   }, [navigate]);
 
@@ -54,8 +55,8 @@ export function TestCasesPage() {
     fetchTestCases({ ...newFilters, page: 1 });
   }, [testCaseFilters, setTestCaseFilters, fetchTestCases]);
 
-  const handleStatusChange = useCallback((status: 'draft' | 'approved' | undefined) => {
-    const newFilters = { ...testCaseFilters, status };
+  const handleStatusChange = useCallback((status: string | undefined) => {
+    const newFilters = { ...testCaseFilters, status: status as 'draft' | 'approved' | undefined };
     setTestCaseFilters(newFilters);
     fetchTestCases({ ...newFilters, page: 1 });
   }, [testCaseFilters, setTestCaseFilters, fetchTestCases]);
@@ -77,71 +78,36 @@ export function TestCasesPage() {
     return null;
   }, [testCases, id]);
 
-  // Convert test cases to the format expected by RequirementList
-  const testCasesAsRequirements = useMemo(() => {
-    return testCases.map(tc => ({
-      id: tc.id,
-      identifier: tc.id,
-      title: tc.title,
-      description: tc.description || '',
-      status: tc.status as 'draft' | 'approved',
-      created_by: tc.createdBy || '',
-      creatorName: tc.createdByName || 'Unknown',
-      created_at: tc.createdAt,
-      updated_at: tc.createdAt, // Test cases don't have a separate lastModified field
-      lastModified: tc.createdAt, // Add this for RequirementList compatibility
-      createdAt: tc.createdAt, // Ensure both formats are available
-      version: tc.revision || 0,
-      approved: tc.status === 'approved',
-      approved_at: tc.approvedAt,
-      approvedAt: tc.approvedAt, // Add both formats
-      approved_by: tc.approvedBy,
-      approverName: tc.approvedByName
-    }));
-  }, [testCases]);
-
-  const memoizedControls = useMemo(() => (
-    <RequirementsListControls
-      search={testCaseFilters.search}
-      status={testCaseFilters.status}
-      totalCount={testCasePagination.total}
-      onSearchChange={handleSearchChange}
-      onStatusChange={handleStatusChange as any}
-      sortBy={testCaseFilters.sort as 'lastModified' | 'createdAt' | 'approvedAt'}
-      sortOrder={testCaseFilters.order as 'asc' | 'desc'}
-      onSortChange={handleSortChange}
-      currentPage={testCasePagination.page}
-      totalPages={testCasePagination.pages}
-      onPageChange={handlePageChange}
-      loading={loading}
-      searchPlaceholder="Search test cases..."
-    />
-  ), [
-    testCaseFilters,
-    testCasePagination,
-    handleSearchChange,
-    handleStatusChange,
-    handleSortChange,
-    handlePageChange,
-    loading
-  ]);
-
   // Split the selectedId out to avoid re-rendering the entire list when selection changes
   const leftPanel = (
-    <div className="flex flex-col h-full">
-      <RequirementList
-        requirements={testCasesAsRequirements}
-        onSelectRequirement={handleSelectTestCase}
-        onCreateNew={handleCreateNew}
-        loading={loading}
-        selectedId={id || null}
-        sortBy={testCaseFilters.sort as 'lastModified' | 'createdAt' | 'approvedAt'}
-        title="Test Cases"
-        requirementType="test"
-        totalCount={testCasePagination.total}
-        filters={memoizedControls}
-      />
-    </div>
+    <ItemList<TestCase>
+      items={testCases}
+      onSelectItem={handleSelectTestCase}
+      onCreateNew={handleCreateNew}
+      loading={loading}
+      selectedId={id || null}
+      sortBy={testCaseFilters.sort as 'lastModified' | 'createdAt' | 'approvedAt'}
+      title="Test Cases"
+      itemType="test"
+      totalCount={testCasePagination.total}
+      filters={
+        <RequirementsListControls
+          search={testCaseFilters.search}
+          status={testCaseFilters.status}
+          totalCount={testCasePagination.total}
+          onSearchChange={handleSearchChange}
+          onStatusChange={handleStatusChange}
+          sortBy={testCaseFilters.sort as 'lastModified' | 'createdAt' | 'approvedAt'}
+          sortOrder={testCaseFilters.order as 'asc' | 'desc'}
+          onSortChange={handleSortChange}
+          currentPage={testCasePagination.page}
+          totalPages={testCasePagination.pages}
+          onPageChange={handlePageChange}
+          loading={loading}
+          searchPlaceholder="Search test cases..."
+        />
+      }
+    />
   );
 
   const rightPanel = useMemo(() => {

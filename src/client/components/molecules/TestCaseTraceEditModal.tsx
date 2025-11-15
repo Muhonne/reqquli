@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Modal } from './Modal';
 import { Button, Input, ListItemStyle } from '../atoms';
 import { TraceListItem } from './TraceListItem';
@@ -29,13 +29,7 @@ export function TestCaseTraceEditModal({
   const [removingTraceId, setRemovingTraceId] = useState<string | null>(null);
   const [testCase, setTestCase] = useState<any>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen, testCaseId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Load test case details
@@ -66,16 +60,21 @@ export function TestCaseTraceEditModal({
         !alreadyTracedIds.includes(req.id)
       );
       setRecentItems(filteredItems.slice(0, 10));
-    } catch (error) {
-      console.error('Error loading trace data:', error);
+    } catch {
       setUpstreamTraces([]);
       setRecentItems([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [testCaseId]);
 
-  const handleSearch = async (term: string) => {
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen, loadData]);
+
+  const handleSearch = useCallback(async (term: string) => {
     if (!term.trim()) {
       setSearchResults([]);
       return;
@@ -98,20 +97,19 @@ export function TestCaseTraceEditModal({
         !alreadyTracedIds.includes(req.id)
       );
       setSearchResults(filteredResults.slice(0, 10));
-    } catch (error) {
-      console.error('Error searching:', error);
+    } catch {
       setSearchResults([]);
     } finally {
       setSearching(false);
     }
-  };
+  }, [upstreamTraces]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       handleSearch(searchTerm);
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, upstreamTraces]);
+  }, [searchTerm, handleSearch]);
 
   const displayItems = searchTerm ? searchResults : recentItems;
 
@@ -126,8 +124,8 @@ export function TestCaseTraceEditModal({
 
       // Notify parent
       await onSave();
-    } catch (error) {
-      console.error('Error removing upstream trace:', error);
+    } catch {
+      // Error handling is done by the API service
     } finally {
       setRemovingTraceId(null);
     }
@@ -137,11 +135,10 @@ export function TestCaseTraceEditModal({
     setAddingTraceId(itemId);
     try {
       // Create trace from system requirement to test case
+      // Types are determined from ID prefixes on the backend
       await tracesApi.createTrace({
         fromId: itemId,
-        toId: testCaseId,
-        fromType: 'system',
-        toType: 'testcase'
+        toId: testCaseId
       });
 
       // Reload data to refresh the trace list
@@ -149,8 +146,8 @@ export function TestCaseTraceEditModal({
 
       // Notify parent
       await onSave();
-    } catch (error) {
-      console.error('Error adding trace:', error);
+    } catch {
+      // Error handling is done by the API service
     } finally {
       setAddingTraceId(null);
     }

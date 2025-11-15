@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Trash2, GripVertical, Trash } from 'lucide-react';
+import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { Button, Input, Textarea, Badge, Text, MonoText, Heading, Stack } from '../atoms';
 import { FormField, MetadataSection, PasswordConfirmModal, Modal, TestCaseTraceEditModal, TraceLinksSection, TestResultLink } from '../molecules';
 import useTestRunStore from '../../stores/testRunStore';
@@ -96,26 +96,37 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
       if (response.ok) {
         const data = await response.json();
         // Map upstream traces to display linked requirements
-        const mappedUpstream = (data.upstreamTraces || []).map((trace: any) => ({
-          id: trace.from_requirement_id,
-          title: trace.from_title || trace.from_requirement_id,
-          description: trace.description,
-          status: trace.status,
-          type: trace.from_type as 'user' | 'system' | 'testcase'
-        }));
+        // Determine type from ID prefix (UR-, SR-, RISK-, etc.)
+        const mappedUpstream = (data.upstreamTraces || []).map((trace: any) => {
+          const id = trace.from_requirement_id;
+          const type = id?.startsWith('UR-') ? 'user' :
+                       id?.startsWith('SR-') ? 'system' :
+                       id?.startsWith('RISK-') ? 'risk' : 'system';
+          return {
+            id,
+            title: trace.from_title || id,
+            description: trace.description,
+            status: trace.status,
+            type: type as 'user' | 'system' | 'testcase' | 'risk'
+          };
+        });
         setUpstreamTraces(mappedUpstream);
 
         // Map downstream traces
-        const mappedDownstream = (data.downstreamTraces || []).map((trace: any) => ({
-          id: trace.to_requirement_id,
-          title: trace.to_title || trace.testRunName || trace.to_requirement_id,
-          description: trace.description,
-          status: trace.status,
-          type: (trace.trace_type || trace.to_type) as 'user' | 'system' | 'testcase' | 'testresult',
-          result: trace.result,
-          testRunId: trace.testRunId,
-          testRunName: trace.testRunName
-        }));
+        const mappedDownstream = (data.downstreamTraces || []).map((trace: any) => {
+          const id = trace.to_requirement_id;
+          const type = trace.trace_type || (id?.startsWith('TRES-') ? 'testresult' : 'testcase');
+          return {
+            id,
+            title: trace.to_title || trace.testRunName || id,
+            description: trace.description,
+            status: trace.status,
+            type: type as 'user' | 'system' | 'testcase' | 'testresult',
+            result: trace.result,
+            testRunId: trace.testRunId,
+            testRunName: trace.testRunName
+          };
+        });
         setDownstreamTraces(mappedDownstream);
       } else {
         // Failed to load traces
@@ -314,7 +325,7 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
         });
         navigate(`/test-cases/${newTestCase.id}`);
       } else if (testCase) {
-        // Update existing test case (only for draft status)
+        // Update existing test case
         await updateTestCase(testCase.id, {
           title: title.trim(),
           description: description.trim(),
@@ -324,11 +335,14 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
         setIsEditing(false);
         // Reset the initialized ref after successful update
         initializedRef.current = null;
+        // Refresh test cases to get updated data
+        await fetchTestCases();
       }
     } catch {
       // Error saving test case - validation or network error
+      // Error is handled by the store
     }
-  }, [isCreateMode, isEditing, testCase, title, description, steps, linkedRequirements, createTestCase, updateTestCase, navigate, validateForm]);
+  }, [isCreateMode, isEditing, testCase, title, description, steps, linkedRequirements, createTestCase, updateTestCase, navigate, validateForm, fetchTestCases]);
 
   const handleCreateAndApprove = useCallback(async (password: string) => {
     // Use approval service to create and approve in one operation
@@ -462,65 +476,6 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
                 />
               </FormField>
 
-              {/* Traces Section */}
-              <div className="space-y-4">
-                {/* Upstream Traces Section - System Requirements */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Heading level={2} className="text-base font-medium">
-                      Traces from System Requirements
-                    </Heading>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setShowTraceEditModal(true)}
-                      disabled={loading}
-                      data-testid="testcase-edit-traces"
-                    >
-                      Edit Traces
-                    </Button>
-                  </div>
-                  <TraceLinksSection
-                    title=""
-                    links={upstreamTraces}
-                    type="system"
-                    loading={loadingTraces}
-                  />
-                </div>
-
-                {/* Test Results Section - Automatically generated from approved test runs */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Heading level={2} className="text-base font-medium">
-                      Test Execution Results
-                    </Heading>
-                    <Text variant="small" color="muted">
-                      Generated from approved test runs
-                    </Text>
-                  </div>
-                  {downstreamTraces.filter(t => t.type === 'testresult').length > 0 ? (
-                    <div className="w-full border border-gray-300 bg-white px-3 py-2">
-                      <div className="space-y-0.5">
-                        {downstreamTraces.filter(t => t.type === 'testresult').map((result: any) => (
-                          <TestResultLink
-                            key={result.id}
-                            id={result.id}
-                            testRunId={result.testRunId}
-                            testRunName={result.title || result.testRunName}
-                            description={result.description}
-                            result={result.result || 'pass'}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 italic">
-                      No test results yet. Results will appear here after test runs are approved.
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Test Steps */}
               <FormField label="Test Steps">
                 {existingSteps.length === 0 ? (
@@ -583,7 +538,6 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
                       className="h-10 text-red-700 hover:text-red-800"
                       testid="test-case-delete"
                     >
-                      <Trash className="w-4 h-4 mr-2" />
                       Delete
                     </Button>
                   )}
@@ -596,9 +550,69 @@ export function TestCaseForm({ isCreateMode = false }: TestCaseFormProps) {
                       onClick={() => setShowApprovalModal(true)}
                       disabled={loading}
                       className="h-10"
+                      testid="test-case-approve"
                     >
                       Approve
                     </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Traces Section */}
+              <div className="space-y-4">
+                {/* Upstream Traces Section - System Requirements */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Heading level={2} className="text-base font-medium">
+                      Trace from
+                    </Heading>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowTraceEditModal(true)}
+                      disabled={loading}
+                      data-testid="testcase-edit-traces"
+                    >
+                      Edit Traces
+                    </Button>
+                  </div>
+                  <TraceLinksSection
+                    title=""
+                    links={upstreamTraces}
+                    type="system"
+                    loading={loadingTraces}
+                  />
+                </div>
+
+                {/* Test Results Section - Automatically generated from approved test runs */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Heading level={2} className="text-base font-medium">
+                      Test Execution Results
+                    </Heading>
+                    <Text variant="small" color="muted">
+                      Generated from approved test runs
+                    </Text>
+                  </div>
+                  {downstreamTraces.filter(t => t.type === 'testresult').length > 0 ? (
+                    <div className="w-full border border-gray-300 bg-white px-3 py-2">
+                      <div className="space-y-0.5">
+                        {downstreamTraces.filter(t => t.type === 'testresult').map((result: any) => (
+                          <TestResultLink
+                            key={result.id}
+                            id={result.id}
+                            testRunId={result.testRunId}
+                            testRunName={result.title || result.testRunName}
+                            description={result.description}
+                            result={result.result || 'pass'}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 italic">
+                      No test results yet. Results will appear here after test runs are approved.
+                    </div>
                   )}
                 </div>
               </div>

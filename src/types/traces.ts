@@ -4,18 +4,27 @@ export interface RequirementTrace {
   id: string;
   title: string;
   status: 'draft' | 'approved';
-  type: 'user' | 'system' | 'testcase' | 'testrun';
+  type: 'user' | 'system' | 'testcase' | 'testresult' | 'risk';
+  isSystemGenerated?: boolean;
+  executedAt?: string;
+  testRunId?: string;
 }
 
 export interface TraceRelationship {
   id: string;
   fromId: string;
   toId: string;
-  fromType: 'user' | 'system' | 'testcase' | 'testrun';
-  toType: 'user' | 'system' | 'testcase' | 'testrun';
+  // Types are computed dynamically from ID prefixes in API responses, not stored in DB
+  fromType?: 'user' | 'system' | 'testcase' | 'testresult' | 'risk';
+  toType?: 'user' | 'system' | 'testcase' | 'testresult' | 'risk';
   createdAt: string;
-  createdBy: string;
+  createdBy?: string;
   createdByName?: string;
+  isSystemGenerated?: boolean;
+  fromTitle?: string;
+  fromStatus?: string;
+  toTitle?: string;
+  toStatus?: string;
 }
 
 export interface RequirementTracesResponse {
@@ -32,8 +41,7 @@ export interface DownstreamTracesResponse {
 export interface CreateTraceRequest {
   fromId: string;
   toId: string;
-  fromType: 'user' | 'system' | 'testcase' | 'testrun';
-  toType: 'user' | 'system' | 'testcase' | 'testrun';
+  // Types are determined from ID prefixes on the backend, no need to send them
 }
 
 export interface CreateTraceResponse {

@@ -6,6 +6,7 @@ import path from 'path';
 import authRouter from './routes/auth';
 import userRequirementsRouter from './routes/userRequirements';
 import systemRequirementsRouter from './routes/systemRequirements';
+import risksRouter from './routes/risks';
 import tracesRouter from './routes/traces';
 import testRunsRouter from './routes/testRuns';
 import { initializeAuditRoutes } from './routes/audit';
@@ -62,6 +63,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 app.use('/api/auth', authRouter);
 app.use('/api/user-requirements', authenticateToken, userRequirementsRouter);
 app.use('/api/system-requirements', authenticateToken, systemRequirementsRouter);
+app.use('/api/risks', authenticateToken, risksRouter);
 
 // Initialize audit routes with database pool
 import { pool } from './config/database';

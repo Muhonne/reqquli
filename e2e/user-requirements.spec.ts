@@ -133,11 +133,41 @@ test.describe('User Requirements', () => {
 
   test.describe('Approve', () => {
     test('should approve draft requirement', async ({ page }) => {
-      // Use UR-3 which is confirmed to be in draft status
-      const requirementId = 'UR-3';  // Password Reset Functionality - in draft status
+      // Navigate to user requirements list
+      await page.goto('/user-requirements');
 
-      // Navigate directly to the requirement detail page
-      await page.goto(`/user-requirements/${requirementId}`);
+      // Wait for the list to load
+      await page.waitForSelector('[data-testid^="requirement-card-"]', { timeout: 10000 });
+
+      // Find any draft requirement (one with draft status icon)
+      let requirementId: string | null = null;
+      let found = false;
+      
+      // Look through cards to find one with draft status
+      const cards = page.locator('[data-testid^="requirement-card-"]');
+      const cardCount = await cards.count();
+      
+      for (let i = 0; i < Math.min(cardCount, 20); i++) {
+        const card = cards.nth(i);
+        const testId = await card.getAttribute('data-testid');
+        if (testId) {
+          const id = testId.replace('requirement-card-', '');
+          // Check if this requirement has a draft status (not approved)
+          const draftStatus = page.locator(`[data-testid="requirement-status-draft-${id}"]`);
+          const approvedStatus = page.locator(`[data-testid="requirement-status-approved-${id}"]`);
+          
+          if (await draftStatus.isVisible() || !(await approvedStatus.isVisible())) {
+            requirementId = id;
+            await card.click();
+            found = true;
+            break;
+          }
+        }
+      }
+
+      if (!found || !requirementId) {
+        throw new Error('Could not find any draft requirement in the list');
+      }
 
       // Wait for detail panel to load
       await page.waitForSelector('[data-testid="requirement-title-readonly"]', { timeout: 10000 });
@@ -182,12 +212,39 @@ test.describe('User Requirements', () => {
     test('should reset approved requirement to draft on edit', async ({ page }) => {
       await page.goto('/user-requirements');
 
-      // Find an approved requirement - UR-50 should be first (AI-Powered Analysis)
-      // It's the most recently modified approved requirement
-      const approvedRequirement = page.locator('[data-testid="requirement-card-UR-50"]');
-      await expect(approvedRequirement).toBeVisible();
+      // Wait for the list to load
+      await page.waitForSelector('[data-testid^="requirement-card-"]', { timeout: 10000 });
 
-      const requirementId = 'UR-50';
+      // Find any approved requirement (one with approved status icon)
+      let requirementId: string | null = null;
+      let found = false;
+      
+      // Look through cards to find one with approved status
+      const cards = page.locator('[data-testid^="requirement-card-"]');
+      const cardCount = await cards.count();
+      
+      for (let i = 0; i < Math.min(cardCount, 20); i++) {
+        const card = cards.nth(i);
+        const testId = await card.getAttribute('data-testid');
+        if (testId) {
+          const id = testId.replace('requirement-card-', '');
+          // Check if this requirement has an approved status
+          const approvedStatus = page.locator(`[data-testid="requirement-status-approved-${id}"]`);
+          
+          if (await approvedStatus.isVisible()) {
+            requirementId = id;
+            found = true;
+            break;
+          }
+        }
+      }
+
+      if (!found || !requirementId) {
+        throw new Error('Could not find any approved requirement in the list');
+      }
+
+      const approvedRequirement = page.locator(`[data-testid="requirement-card-${requirementId}"]`);
+      await expect(approvedRequirement).toBeVisible();
 
       // Click on it
       await approvedRequirement.click();

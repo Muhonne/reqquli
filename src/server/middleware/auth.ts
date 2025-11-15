@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/jwt.config';
+import { unauthorized } from '../utils/responses';
 
 interface JWTPayload {
   userId: string;
@@ -29,14 +30,14 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return unauthorized(res, 'Authentication required');
     }
     
     token = authHeader.substring(7).trim();
   }
   
   if (!token || token === 'undefined' || token === 'null' || token === '') {
-    return res.status(401).json({ error: 'Invalid token format' });
+    return unauthorized(res, 'Invalid token format');
   }
 
   try {
@@ -51,7 +52,7 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
     next();
   } catch (error) {
     console.error('Token verification failed:', error);
-    return res.status(401).json({ error: 'Invalid token' });
+    return unauthorized(res, 'Invalid token');
   }
 };
 

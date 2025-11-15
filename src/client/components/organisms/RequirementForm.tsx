@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button, Input, Textarea, Badge, Text, MonoText, Heading, Stack } from '../atoms'
 import { FormField, MetadataSection, TraceLinksSection, PasswordConfirmModal, TraceEditModal } from '../molecules'
@@ -82,8 +82,7 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
         const api = requirementType === 'user' ? userRequirementApi : systemRequirementApi
         const response = await api.get(id.toUpperCase())
         setRequirement(response.requirement)
-      } catch (error) {
-        console.error('Failed to fetch requirement:', error)
+      } catch {
         setRequirement(null)
       } finally {
         setLoadingRequirement(false)
@@ -103,8 +102,7 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
         const response = await tracesApi.getRequirementTraces(requirement.id)
         setUpstreamTraces(response.upstreamTraces)
         setDownstreamTraces(response.downstreamTraces)
-      } catch (error) {
-        console.error('Failed to fetch trace relationships:', error)
+      } catch {
         setUpstreamTraces([])
         setDownstreamTraces([])
       } finally {
@@ -148,14 +146,18 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
     if (!requirement) {return}
 
     // Update requirement with password to revert to draft
-    await actions.updateRequirement(requirement.id, {
+    const updatedRequirement = await actions.updateRequirement(requirement.id, {
       title: requirement.title,
       description: requirement.description,
       password
     })
+    // Update local requirement state with the updated requirement
+    setRequirement(updatedRequirement)
     // Only switch to edit mode if the update was successful
     setIsEditing(true)
     setShowPasswordConfirm(false)
+    // Refresh requirements list to get updated data
+    await actions.fetchRequirements()
   }, [requirement, actions])
 
   const handleCancel = useCallback(() => {
@@ -188,6 +190,21 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
     return true
   }, [title, description])
 
+  // Check if there are changes to the requirement
+  const hasChanges = useMemo(() => {
+    if (isCreateMode) {
+      // In create mode, there are changes if title or description is not empty
+      return title.trim().length > 0 || description.trim().length > 0
+    }
+    if (!requirement) {
+      return false
+    }
+    // Compare current form values with original requirement values
+    const titleChanged = title.trim() !== (requirement.title || '').trim()
+    const descriptionChanged = description.trim() !== (requirement.description || '').trim()
+    return titleChanged || descriptionChanged
+  }, [title, description, requirement, isCreateMode])
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -207,20 +224,36 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
         const newRequirement = await actions.createRequirement(createData)
         // Navigate to the new requirement's detail page (not edit mode)
         navigate(`/${requirementType}-requirements/${newRequirement.id}`)
-      } catch (error) {
-        console.error('Failed to create requirement:', error)
+      } catch {
+        // Error handling is done by the API service
       }
     } else if (requirement) {
+      // If there are no changes, just exit edit mode without making an API call
+      if (!hasChanges) {
+        setIsEditing(false)
+        return
+      }
+
       // Update existing requirement
       const updateData = {
         title: title.trim(),
         description: description.trim()
       }
 
-      await actions.updateRequirement(requirement.id, updateData)
-      setIsEditing(false)
+      try {
+        const updatedRequirement = await actions.updateRequirement(requirement.id, updateData)
+        // Explicitly sync the requirement state to ensure it's updated
+        setRequirement(updatedRequirement)
+        setIsEditing(false)
+        // Refresh requirements list to get updated data
+        await actions.fetchRequirements()
+      } catch (error) {
+        // Error handling is done by the API service
+        // Stay in edit mode on error so user can retry
+        console.error('Failed to update requirement:', error)
+      }
     }
-  }, [isEditing, requirement, title, description, requirementType, actions, isCreateMode, navigate, validateForm])
+  }, [isEditing, requirement, title, description, requirementType, actions, isCreateMode, navigate, validateForm, hasChanges])
 
   const handleCreateAndApprove = useCallback(() => {
     if (!validateForm()) {return}
@@ -353,7 +386,7 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Heading level={2} className="text-base font-medium">
-                        Traces from User Requirements
+                        Trace from
                       </Heading>
                       <Button
                         variant="secondary"
@@ -378,7 +411,7 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Heading level={2} className="text-base font-medium">
-                      {requirementType === 'user' ? 'Traces to System Requirements' : 'Traces to Test Cases'}
+                      Trace to
                     </Heading>
                     <Button
                       variant="secondary"
@@ -486,8 +519,8 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
                   const response = await tracesApi.getRequirementTraces(requirement.id)
                   setUpstreamTraces(response.upstreamTraces)
                   setDownstreamTraces(response.downstreamTraces)
-                } catch (error) {
-                  console.error('Failed to refresh traces:', error)
+                } catch {
+                  // Error handling is done by the API service
                 }
                 // Reload requirement data
                 await actions.fetchRequirements();
@@ -505,8 +538,8 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
                   const response = await tracesApi.getRequirementTraces(requirement.id)
                   setUpstreamTraces(response.upstreamTraces)
                   setDownstreamTraces(response.downstreamTraces)
-                } catch (error) {
-                  console.error('Failed to refresh traces:', error)
+                } catch {
+                  // Error handling is done by the API service
                 }
                 // Reload requirement data
                 await actions.fetchRequirements();
@@ -630,7 +663,12 @@ export function RequirementForm({ requirementType, isCreateMode = false }: Requi
 
             <div className="flex justify-between">
               <div className="flex gap-2">
-                <Button type="submit" variant="primary" disabled={loading} testid="requirement-save">
+                <Button 
+                  type="submit" 
+                  variant="primary" 
+                  disabled={loading || (!isCreateMode && !hasChanges)} 
+                  testid="requirement-save"
+                >
                   {loading ? (isCreateMode ? 'Creating...' : 'Saving...') : (isCreateMode ? 'Create as Draft' : 'Save')}
                 </Button>
                 <Button type="button" variant="secondary" onClick={handleCancel} disabled={loading} testid="requirement-cancel">

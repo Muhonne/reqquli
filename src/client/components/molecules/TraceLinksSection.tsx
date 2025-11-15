@@ -5,13 +5,13 @@ interface TraceLinkData {
   id: string;
   title: string;
   description?: string;
-  type?: 'user' | 'system' | 'testcase';
+  type?: 'user' | 'system' | 'testcase' | 'risk';
 }
 
 interface TraceLinksSectionProps {
   title: string;
   links: TraceLinkData[];
-  type: 'user' | 'system' | 'testcase';
+  type: 'user' | 'system' | 'testcase' | 'risk';
   loading?: boolean;
 }
 

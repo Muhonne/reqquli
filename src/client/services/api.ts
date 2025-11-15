@@ -19,7 +19,14 @@ import {
   ApproveSystemRequirementRequest,
   SystemRequirementFilters
 } from '../../types/system-requirements';
-import {  ErrorResponse } from '../../types/common';
+import {
+  RiskRecordListResponse,
+  RiskRecordResponse,
+  CreateRiskRecordRequest,
+  UpdateRiskRecordRequest,
+  ApproveRiskRecordRequest,
+  RiskRecordFilters
+} from '../../types/risks';
 import {
   GetTestRunsResponse,
   CreateTestRunRequest,
@@ -67,17 +74,32 @@ async function fetchApi<T>(endpoint: string, options: RequestInit & { skipAuthRe
 
   const response = await fetch(url, config);
   
+  // Helper function to extract error message from standardized backend format
+  // Standard format: { error: { code: string, message: string, details?: any } }
+  const extractErrorMessage = (errorData: any, defaultMessage: string): string => {
+    if (errorData?.error) {
+      if (typeof errorData.error === 'object' && errorData.error?.message) {
+        return errorData.error.message;
+      }
+      if (typeof errorData.error === 'string') {
+        return errorData.error;
+      }
+    }
+    return defaultMessage;
+  };
+
   // Handle unauthorized
   if (response.status === 401) {
     // If skipAuthRedirect is true, just throw the error without redirecting
     if (options.skipAuthRedirect) {
-      let errorData: ErrorResponse;
+      let errorData: any;
       try {
         errorData = await response.json();
       } catch {
-        errorData = { error: 'Unauthorized' };
+        errorData = {};
       }
-      throw new ApiError(401, errorData.error, errorData);
+      const errorMessage = extractErrorMessage(errorData, 'Unauthorized');
+      throw new ApiError(401, errorMessage, errorData);
     }
     
     // This is a real auth failure - redirect to login
@@ -88,13 +110,14 @@ async function fetchApi<T>(endpoint: string, options: RequestInit & { skipAuthRe
   }
   
   if (!response.ok) {
-    let errorData: ErrorResponse;
+    let errorData: any;
     try {
       errorData = await response.json();
     } catch {
-      errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+      errorData = {};
     }
-    throw new ApiError(response.status, errorData.error, errorData);
+    const errorMessage = extractErrorMessage(errorData, `HTTP ${response.status}: ${response.statusText}`);
+    throw new ApiError(response.status, errorMessage, errorData);
   }
 
   return response.json();
@@ -238,8 +261,8 @@ export const systemRequirementApi = {
 // New traces API for many-to-many relationships
 export const tracesApi = {
   // Get all traces in the system
-  getAllTraces: async (): Promise<{ traces: any[] }> => {
-    return fetchApi<{ traces: any[] }>('/traces');
+  getAllTraces: async (): Promise<{ traces: unknown[] }> => {
+    return fetchApi<{ traces: unknown[] }>('/traces');
   },
 
   // Get all traces for a requirement (upstream and downstream)
@@ -336,7 +359,7 @@ export const testRunApi = {
   // Update test case
   updateTestCase: async (testCaseId: string, data: UpdateTestCaseRequest): Promise<UpdateTestCaseResponse> => {
     return fetchApi<UpdateTestCaseResponse>(`/test-cases/${testCaseId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(data),
       // Skip auth redirect when password is provided (for password validation errors)
       skipAuthRedirect: !!data.password
@@ -430,4 +453,69 @@ export const testRunApi = {
 };
 
 export { ApiError };
-export default { userRequirementApi, systemRequirementApi, tracesApi, testRunApi };
+export const riskApi = {
+  // List risks with filtering and pagination
+  list: async (filters: RiskRecordFilters = {}): Promise<RiskRecordListResponse> => {
+    const params = new URLSearchParams();
+    
+    if (filters.status) {params.append('status', filters.status);}
+    if (filters.sort) {params.append('sort', filters.sort);}
+    if (filters.order) {params.append('order', filters.order);}
+    if (filters.page) {params.append('page', filters.page.toString());}
+    if (filters.limit) {params.append('limit', filters.limit.toString());}
+    if (filters.search) {params.append('search', filters.search);}
+
+    const queryString = params.toString();
+    const endpoint = `/risks${queryString ? `?${queryString}` : ''}`;
+    
+    return fetchApi<RiskRecordListResponse>(endpoint);
+  },
+
+  // Get single risk record by ID
+  get: async (id: string): Promise<RiskRecordResponse> => {
+    return fetchApi<RiskRecordResponse>(`/risks/${id}`);
+  },
+
+  // Create new risk record
+  create: async (data: CreateRiskRecordRequest): Promise<RiskRecordResponse> => {
+    return fetchApi<RiskRecordResponse>('/risks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      skipAuthRedirect: !!data.password
+    });
+  },
+
+  // Update existing risk record
+  update: async (id: string, data: UpdateRiskRecordRequest): Promise<RiskRecordResponse> => {
+    return fetchApi<RiskRecordResponse>(`/risks/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      skipAuthRedirect: !!data.password
+    });
+  },
+
+  // Approve risk record
+  approve: async (id: string, data: ApproveRiskRecordRequest): Promise<RiskRecordResponse> => {
+    return fetchApi<RiskRecordResponse>(`/risks/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      skipAuthRedirect: true
+    });
+  },
+
+  // Delete risk record (soft delete)
+  delete: async (id: string, password?: string): Promise<{ success: boolean; message: string }> => {
+    return fetchApi(`/risks/${id}`, {
+      method: 'DELETE',
+      body: password ? JSON.stringify({ password }) : undefined,
+      skipAuthRedirect: !!password
+    });
+  },
+
+  // Get downstream traces (system requirements linked as control measures)
+  getDownstreamTraces: async (id: string): Promise<{ success: boolean; traces: unknown[] }> => {
+    return fetchApi<{ success: boolean; traces: unknown[] }>(`/risks/${id}/downstream-traces`);
+  },
+};
+
+export default { userRequirementApi, systemRequirementApi, riskApi, tracesApi, testRunApi };

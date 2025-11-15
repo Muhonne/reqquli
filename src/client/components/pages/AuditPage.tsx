@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Activity,
   User,
@@ -66,11 +66,7 @@ export const AuditPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    loadData();
-  }, [activeTab, filters, page]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -104,12 +100,16 @@ export const AuditPage: React.FC = () => {
           setUserActivity(data.users);
         }
       }
-    } catch (error) {
-      console.error('Error loading audit data:', error);
+    } catch {
+      // Error handling is done by the API service
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, filters, page]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const toggleEventExpansion = (eventId: string) => {
     setExpandedEvents(prev => {

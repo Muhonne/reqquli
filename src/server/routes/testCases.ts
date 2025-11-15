@@ -144,11 +144,10 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
     for (const reqId of linkedRequirements) {
       await client.query(
         `INSERT INTO traces (
-          from_requirement_id, to_requirement_id,
-          from_type, to_type, created_by, created_at
-        ) VALUES ($1, $2, $3, 'testcase', $4, NOW())
-        ON CONFLICT DO NOTHING`,
-        [reqId, testCaseId, 'system', userId]
+          from_requirement_id, to_requirement_id, created_by, created_at
+        ) VALUES ($1, $2, $3, NOW())
+        ON CONFLICT (from_requirement_id, to_requirement_id) DO NOTHING`,
+        [reqId, testCaseId, userId]
       );
     }
 
@@ -189,7 +188,7 @@ router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: R
 
   try {
     const { id } = req.params;
-    const { title, description, steps } = req.body;
+    const { title, description, steps, password, linkedRequirements } = req.body;
     const userId = req.user?.userId;
 
     await client.query('BEGIN');
@@ -210,10 +209,40 @@ router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: R
     let newStatus = testCase.status;
     let newRevision = testCase.revision;
 
+    // Password validation: required when editing an approved test case
+    const wasApproved = testCase.status === 'approved';
+    
+    if (wasApproved && !password) {
+      await client.query('ROLLBACK');
+      return badRequest(res, "Password required to edit approved test case");
+    }
+
+    if (wasApproved && password) {
+      const bcrypt = require('bcrypt');
+      const userQuery = `
+        SELECT password_hash FROM users WHERE id = $1
+      `;
+      const userResult = await client.query(userQuery, [userId]);
+
+      if (userResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return unauthorized(res, "User not found");
+      }
+
+      const isValid = await bcrypt.compare(password, userResult.rows[0].password_hash);
+
+      if (!isValid) {
+        await client.query('ROLLBACK');
+        return unauthorized(res, "Invalid password");
+      }
+    }
+
     // Reset to draft if approved and being edited
+    // Revision does NOT increment on edit - only on approval (per approval-workflow.md)
     if (testCase.status === 'approved') {
       newStatus = 'draft';
-      newRevision = testCase.revision + 1;
+      // Revision remains unchanged when editing approved items
+      newRevision = testCase.revision;
     }
 
     // Update test case
@@ -262,6 +291,26 @@ router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: R
       }
     }
 
+    // Update linked requirements (traces) if provided
+    if (linkedRequirements !== undefined) {
+      // Delete existing traces to this test case
+      await client.query(
+        'DELETE FROM traces WHERE to_requirement_id = $1',
+        [id]
+      );
+
+      // Create new traces
+      for (const reqId of linkedRequirements) {
+        await client.query(
+          `INSERT INTO traces (
+            from_requirement_id, to_requirement_id, created_by, created_at
+          ) VALUES ($1, $2, $3, NOW())
+          ON CONFLICT (from_requirement_id, to_requirement_id) DO NOTHING`,
+          [reqId, id, userId]
+        );
+      }
+    }
+
     // Log audit event
     await logAuditEvent(
       client,
@@ -279,9 +328,24 @@ router.patch('/:id', authenticateToken, async (req: AuthenticatedRequest, res: R
 
     await client.query('COMMIT');
 
+    // Fetch updated steps (after commit, use pool directly to avoid transaction issues)
+    const stepsQuery = `
+      SELECT
+        id,
+        test_case_id,
+        step_number,
+        action as description,
+        expected_result
+      FROM testing.test_steps
+      WHERE test_case_id = $1
+      ORDER BY step_number
+    `;
+    const stepsResult = await pool.query(stepsQuery, [id]);
+
     res.json({
       success: true,
-      testCase: result.rows[0]
+      testCase: result.rows[0],
+      steps: stepsResult.rows
     });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -466,17 +530,42 @@ router.get('/:id/traces', authenticateToken, async (req: AuthenticatedRequest, r
     }
 
     // Get upstream traces (requirements that trace TO this test case)
+    // Types are determined from ID prefixes, so we join all possible source tables
     const upstreamQuery = `
       SELECT
-        t.*,
-        COALESCE(sr.title, ur.title) as from_title,
-        tc.title as to_title
+        t.id,
+        t.from_requirement_id,
+        t.to_requirement_id,
+        t.created_at,
+        t.is_system_generated,
+        COALESCE(
+          NULLIF(sr.title, ''),
+          NULLIF(ur.title, ''),
+          NULLIF(rr.title, '')
+        ) as from_title,
+        tc.title as to_title,
+        COALESCE(
+          sr.description,
+          ur.description,
+          rr.description
+        ) as description,
+        COALESCE(
+          sr.status,
+          ur.status,
+          rr.status
+        ) as status
       FROM traces t
-      LEFT JOIN system_requirements sr ON t.from_type = 'system' AND t.from_requirement_id = sr.id
-      LEFT JOIN user_requirements ur ON t.from_type = 'user' AND t.from_requirement_id = ur.id
+      LEFT JOIN system_requirements sr ON t.from_requirement_id = sr.id
+      LEFT JOIN user_requirements ur ON t.from_requirement_id = ur.id
+      LEFT JOIN risk_records rr ON t.from_requirement_id = rr.id
       LEFT JOIN testing.test_cases tc ON t.to_requirement_id = tc.id
       WHERE t.to_requirement_id = $1
-        AND t.to_type = 'testcase'
+        AND (
+          (sr.id IS NULL OR sr.deleted_at IS NULL) AND
+          (ur.id IS NULL OR ur.deleted_at IS NULL) AND
+          (rr.id IS NULL OR rr.deleted_at IS NULL) AND
+          (sr.id IS NOT NULL OR ur.id IS NOT NULL OR rr.id IS NOT NULL)
+        )
       ORDER BY t.created_at DESC
     `;
 
@@ -485,7 +574,11 @@ router.get('/:id/traces', authenticateToken, async (req: AuthenticatedRequest, r
     // Get downstream traces (test results that trace FROM this test case)
     const downstreamQuery = `
       SELECT
-        t.*,
+        t.id,
+        t.from_requirement_id,
+        t.to_requirement_id,
+        t.created_at,
+        t.is_system_generated,
         tc.title as from_title,
         tres.test_run_id as "testRunId",
         tr.name as "testRunName",
@@ -495,11 +588,10 @@ router.get('/:id/traces', authenticateToken, async (req: AuthenticatedRequest, r
         'testresult' as trace_type
       FROM traces t
       LEFT JOIN testing.test_cases tc ON t.from_requirement_id = tc.id
-      LEFT JOIN testing.test_results tres ON t.to_requirement_id = tres.id AND t.to_type = 'testresult'
+      LEFT JOIN testing.test_results tres ON t.to_requirement_id = tres.id
       LEFT JOIN testing.test_runs tr ON tres.test_run_id = tr.id
       LEFT JOIN users u2 ON tr.approved_by = u2.id
       WHERE t.from_requirement_id = $1
-        AND t.from_type = 'testcase'
       ORDER BY t.created_at DESC
     `;
 

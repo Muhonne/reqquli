@@ -27,7 +27,7 @@ describe('Authentication Endpoints', () => {
         fail('Should have thrown an error');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.message).toBe('Invalid email or password');
+        expect(error.response.data.error.message).toBe('Invalid email or password');
       }
     });
 
@@ -40,7 +40,7 @@ describe('Authentication Endpoints', () => {
         fail('Should have thrown an error');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.message).toBe('Invalid email or password');
+        expect(error.response.data.error.message).toBe('Invalid email or password');
       }
     });
 
@@ -147,7 +147,10 @@ describe('Authentication Endpoints', () => {
         fail('Should have required authentication');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.error).toContain('Authentication required');
+        const errorMessage = typeof error.response.data.error === 'string' 
+          ? error.response.data.error 
+          : error.response.data.error?.message || '';
+        expect(errorMessage).toContain('Authentication required');
       }
     });
 
@@ -164,7 +167,10 @@ describe('Authentication Endpoints', () => {
         fail('Should have thrown an error');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.error).toContain('Invalid token');
+        const errorMessage = typeof error.response.data.error === 'string' 
+          ? error.response.data.error 
+          : error.response.data.error?.message || '';
+        expect(errorMessage).toContain('Invalid token');
       }
     });
 
@@ -181,7 +187,10 @@ describe('Authentication Endpoints', () => {
         fail('Should have required authentication');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.error).toContain('Authentication required');
+        const errorMessage = typeof error.response.data.error === 'string' 
+          ? error.response.data.error 
+          : error.response.data.error?.message || '';
+        expect(errorMessage).toContain('Authentication required');
       }
     });
   });
@@ -232,7 +241,7 @@ describe('Authentication Endpoints', () => {
         fail('Should have thrown an error');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.message).toBe('No token provided');
+        expect(error.response.data.error.message).toBe('No token provided');
       }
     });
 
@@ -250,7 +259,7 @@ describe('Authentication Endpoints', () => {
         fail('Should have thrown an error');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.message).toBe('Invalid token');
+        expect(error.response.data.error.message).toBe('Invalid token');
       }
     });
 
@@ -271,7 +280,7 @@ describe('Authentication Endpoints', () => {
         fail('Should have thrown an error');
       } catch (error: any) {
         expect(error.response.status).toBe(401);
-        expect(error.response.data.message).toBe('Invalid token');
+        expect(error.response.data.error.message).toBe('Invalid token');
       }
     });
   });
@@ -303,7 +312,7 @@ describe('Authentication Endpoints', () => {
         fail('Should have rejected duplicate email');
       } catch (error: any) {
         expect(error.response.status).toBe(409);
-        expect(error.response.data.message).toContain('already registered');
+        expect(error.response.data.error.message).toContain('already registered');
       }
     });
 
@@ -435,7 +444,7 @@ describe('Authentication Endpoints', () => {
         }
       } catch (error: any) {
         expect(error.response.status).toBe(400);
-        expect(error.response.data.message).toContain('already verified');
+        expect(error.response.data.error.message).toContain('already verified');
       }
     });
 

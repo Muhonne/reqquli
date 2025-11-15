@@ -15,11 +15,6 @@ import {
 
 const router = express.Router();
 
-// No mapping needed - database now uses camelCase
-function mapRequirementFromDb(dbRow: Record<string, unknown>) {
-  return dbRow;
-}
-
 // GET /api/user-requirements - List all user requirements with filtering and pagination
 router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -131,9 +126,7 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
     const total = parseInt(countResult.rows[0].count);
     const pages = Math.ceil(total / effectiveLimit);
 
-    const mappedData = result.rows.map(mapRequirementFromDb);
-
-    return successResponse(res, mappedData, {
+    return successResponse(res, result.rows, {
       pagination: {
         total,
         page: parseInt(page as string),
@@ -191,7 +184,7 @@ router.get("/:id", async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({
       success: true,
-      requirement: mapRequirementFromDb(result.rows[0]),
+      requirement: result.rows[0],
     });
   } catch (error) {
     logger.error("Error fetching user requirement:", error);
@@ -331,7 +324,7 @@ router.post("/", async (req: AuthenticatedRequest, res: Response) => {
 
     res.status(201).json({
       success: true,
-      requirement: mapRequirementFromDb(insertResult.rows[0]),
+      requirement: insertResult.rows[0],
     });
   } catch (error) {
     logger.error("Error creating user requirement:", error);
@@ -509,7 +502,7 @@ router.patch("/:id", async (req: AuthenticatedRequest, res: Response) => {
 
     res.json({
       success: true,
-      requirement: mapRequirementFromDb(updateResult.rows[0]),
+      requirement: updateResult.rows[0],
     });
   } catch (error) {
     logger.error("Error updating user requirement:", error);
@@ -594,7 +587,7 @@ router.post("/:id/approve", async (req: AuthenticatedRequest, res: Response) => 
 
     res.json({
       success: true,
-      requirement: mapRequirementFromDb(updateResult.rows[0]),
+      requirement: updateResult.rows[0],
     });
   } catch (error) {
     logger.error("Error approving user requirement:", error);
@@ -689,8 +682,7 @@ router.get("/:id/downstream-traces", async (req: AuthenticatedRequest, res: Resp
       FROM system_requirements sr
       INNER JOIN traces rt ON sr.id = rt.to_requirement_id
       WHERE rt.from_requirement_id = $1
-        AND rt.from_type = 'user'
-        AND rt.to_type = 'system'
+        AND rt.to_requirement_id LIKE 'SR-%'
         AND sr.deleted_at IS NULL
       ORDER BY sr.id
     `,

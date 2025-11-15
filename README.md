@@ -203,6 +203,35 @@ Complete database schema including all tables, columns, constraints, and indexes
 - Provide user-friendly error messages
 - Log errors appropriately for debugging
 
+**Standard Error Response Format:**
+
+All API error responses follow a consistent format:
+
+```typescript
+{
+  error: {
+    code: string;        // Error code (e.g., 'UNAUTHORIZED', 'BAD_REQUEST', 'NOT_FOUND')
+    message: string;     // Human-readable error message
+    details?: any;       // Optional additional error details
+  }
+}
+```
+
+**Error Codes:**
+- `BAD_REQUEST` (400) - Invalid request parameters
+- `UNAUTHORIZED` (401) - Authentication required or invalid credentials
+- `FORBIDDEN` (403) - Access denied
+- `NOT_FOUND` (404) - Resource not found
+- `CONFLICT` (409) - Resource conflict (e.g., duplicate)
+- `UNPROCESSABLE_ENTITY` (422) - Validation errors
+- `INTERNAL_ERROR` (500) - Server errors
+- `SERVICE_UNAVAILABLE` (503) - Service temporarily unavailable
+
+**Implementation:**
+- Backend: Use helper functions from `src/server/utils/responses.ts` (e.g., `unauthorized()`, `badRequest()`, `notFound()`)
+- Frontend: API client automatically extracts `error.message` from the standardized format
+- All endpoints (including auth) use this format consistently
+
 ### UI/UX Guidelines
 
 - Follow a "newspaper & blueprint" aesthetic: clean, professional, information-dense layouts with minimal colors

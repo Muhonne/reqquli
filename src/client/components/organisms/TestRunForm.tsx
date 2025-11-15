@@ -36,7 +36,7 @@ export const TestRunForm: React.FC<TestRunFormProps> = ({ onSubmit, onCancel }) 
 
   useEffect(() => {
     fetchTestCases({ status: 'approved' });
-  }, []);
+  }, [fetchTestCases]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -244,7 +244,9 @@ export const TestRunForm: React.FC<TestRunFormProps> = ({ onSubmit, onCancel }) 
                             <div className="mt-1">
                               <Checkbox
                                 checked={isSelected}
-                                onChange={() => {}}
+                                onChange={() => {
+                                  // Selection is handled via row click
+                                }}
                                 onClick={(e) => e.stopPropagation()}
                                 data-testid={`test-case-checkbox-${testCase.id}`}
                               />

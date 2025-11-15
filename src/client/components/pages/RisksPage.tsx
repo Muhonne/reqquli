@@ -1,45 +1,44 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
+import { 
   ItemList,
-  RequirementForm,
+  RiskForm,
   RequirementsListControls
 } from '../organisms';
 import { AppLayout, SplitPanelLayout } from '../templates';
 import { Button, Text, Heading, Stack } from '../atoms';
 import { 
-  useUserRequirements, 
-  useUserRequirementsPagination,
-  useUserRequirementsFilters,
-  useUserRequirementsLoading,
-  useUserRequirementsError,
-  useUserRequirementsActions
-} from '../../stores/userRequirementsStore';
-import { UserRequirement } from '../../../types/user-requirements';
+  useRisks, 
+  useRisksPagination,
+  useRisksFilters,
+  useRisksLoading,
+  useRisksError,
+  useRiskActions
+} from '../../stores/riskStore';
+import { RiskRecord, RiskRecordFilters } from '../../../types/risks';
 
 type ViewMode = 'none' | 'detail' | 'create' | 'edit';
 
-export function UserRequirementsPage() {
+export function RisksPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('none');
   
-  const requirements = useUserRequirements();
-  const pagination = useUserRequirementsPagination();
-  const filters = useUserRequirementsFilters();
-  const loading = useUserRequirementsLoading();
-  const error = useUserRequirementsError();
+  const risks = useRisks();
+  const pagination = useRisksPagination();
+  const filters: RiskRecordFilters = useRisksFilters();
+  const loading = useRisksLoading();
+  const error = useRisksError();
   
   const {
-    fetchRequirements,
+    fetchRisks,
     setFilters,
     clearError
-  } = useUserRequirementsActions();
-
+  } = useRiskActions();
 
   useEffect(() => {
-    fetchRequirements();
-  }, [fetchRequirements]);
+    fetchRisks();
+  }, [fetchRisks]);
 
   // Handle URL parameter changes
   useEffect(() => {
@@ -52,52 +51,58 @@ export function UserRequirementsPage() {
     }
   }, [id]);
 
-  const handleSelectRequirement = useCallback((requirement: UserRequirement) => {
-    navigate(`/user-requirements/${requirement.id}`);
+  const handleSelectRisk = useCallback(async (risk: RiskRecord) => {
+    navigate(`/risks/${risk.id}`);
   }, [navigate]);
 
   const handleCreateNew = useCallback(() => {
-    navigate('/user-requirements/new');
+    navigate('/risks/new');
   }, [navigate]);
 
-
-
   const handleSearchChange = useCallback((search: string | undefined) => {
-    const newFilters = { ...filters, search, page: 1 };
+    const newFilters: RiskRecordFilters = { ...filters, search, page: 1 };
     setFilters(newFilters);
-    fetchRequirements(newFilters);
-  }, [filters, setFilters, fetchRequirements]);
+    fetchRisks(newFilters);
+  }, [filters, setFilters, fetchRisks]);
 
   const handleStatusChange = useCallback((status: string | undefined) => {
-    const newFilters = { ...filters, status: status as 'draft' | 'approved' | undefined, page: 1 };
+    const newFilters: RiskRecordFilters = { 
+      ...filters, 
+      status: status as 'draft' | 'approved' | undefined, 
+      page: 1 
+    };
     setFilters(newFilters);
-    fetchRequirements(newFilters);
-  }, [filters, setFilters, fetchRequirements]);
+    fetchRisks(newFilters);
+  }, [filters, setFilters, fetchRisks]);
 
   const handlePageChange = useCallback((page: number) => {
-    const newFilters = { ...filters, page };
+    const newFilters: RiskRecordFilters = { ...filters, page };
     setFilters(newFilters);
-    fetchRequirements(newFilters);
-  }, [filters, setFilters, fetchRequirements]);
+    fetchRisks(newFilters);
+  }, [filters, setFilters, fetchRisks]);
 
   const handleSortChange = useCallback((sort: 'lastModified' | 'createdAt' | 'approvedAt', order: 'asc' | 'desc') => {
-    const newFilters = { ...filters, sort, order, page: 1 };
+    // Map to risk-specific sort options
+    const riskSort = sort === 'lastModified' ? 'lastModified' : 
+                     sort === 'createdAt' ? 'createdAt' : 
+                     'id';
+    const newFilters: RiskRecordFilters = { ...filters, sort: riskSort as 'id' | 'title' | 'createdAt' | 'lastModified' | 'residualRiskScore', order, page: 1 };
     setFilters(newFilters);
-    fetchRequirements(newFilters);
-  }, [filters, setFilters, fetchRequirements]);
-
-
+    fetchRisks(newFilters);
+  }, [filters, setFilters, fetchRisks]);
 
   const leftPanel = useMemo(() => (
-    <ItemList
-      items={requirements || []}
-      onSelectItem={handleSelectRequirement}
+    <ItemList<RiskRecord>
+      items={risks}
+      onSelectItem={handleSelectRisk}
       onCreateNew={handleCreateNew}
-      loading={loading}
+      loading={loading ?? false}
       selectedId={id || null}
-      sortBy={filters?.sort}
-      title="User Requirements"
-      itemType="user"
+      sortBy={filters?.sort === 'lastModified' ? 'lastModified' : 
+              filters?.sort === 'createdAt' ? 'createdAt' : 
+              'lastModified'}
+      title="Risk Management"
+      itemType="risk"
       totalCount={pagination?.total}
       filters={
         <RequirementsListControls
@@ -106,19 +111,27 @@ export function UserRequirementsPage() {
           totalCount={pagination?.total || 0}
           onSearchChange={handleSearchChange}
           onStatusChange={handleStatusChange}
-          sortBy={filters?.sort}
+          sortBy={filters?.sort === 'lastModified' ? 'lastModified' : 
+                  filters?.sort === 'createdAt' ? 'createdAt' : 
+                  'lastModified'}
           sortOrder={filters?.order}
           onSortChange={handleSortChange}
           currentPage={pagination?.page || 1}
           totalPages={pagination?.pages || 1}
           onPageChange={handlePageChange}
           loading={loading}
+          statusOptions={[
+            { value: undefined, label: 'All' },
+            { value: 'draft', label: 'Draft' },
+            { value: 'approved', label: 'Approved' }
+          ]}
+          searchPlaceholder="Search risks..."
         />
       }
     />
   ), [
-    requirements,
-    handleSelectRequirement,
+    risks,
+    handleSelectRisk,
     handleCreateNew,
     loading,
     id,
@@ -154,27 +167,27 @@ export function UserRequirementsPage() {
 
     switch (viewMode) {
       case 'create':
-        return <RequirementForm requirementType="user" isCreateMode />;
+        return <RiskForm isCreateMode />;
 
       case 'edit':
         return (
           <Stack align="center" justify="center" className="h-full">
             <Stack align="center" spacing="sm">
               <Heading level={2} className="text-gray-500">Feature Not Available</Heading>
-              <Text color="muted">Edit functionality will be implemented in a future version.</Text>
+              <Text color="muted">Edit functionality is available via the Edit button in the detail view.</Text>
             </Stack>
           </Stack>
         );
 
       case 'detail':
-        return <RequirementForm requirementType="user" />;
+        return <RiskForm />;
 
       default:
         return (
           <div className="flex items-center justify-center h-full text-gray-500">
             <div className="text-center">
-              <h2 className="text-lg font-medium mb-2">User Requirements</h2>
-              <p>Select a requirement from the list to view details, or create a new one.</p>
+              <h2 className="text-lg font-medium mb-2">Risk Management</h2>
+              <p>Select a risk from the list to view details, or create a new one.</p>
             </div>
           </div>
         );

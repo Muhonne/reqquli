@@ -408,124 +408,125 @@ INSERT INTO system_requirements (
 
 -- Create trace relationships between 30 user requirements and 50 system requirements
 -- Creating multiple traces to demonstrate many-to-many relationships
+-- Types are determined from ID prefixes: UR- (user), SR- (system), TC- (testcase), TRES- (testresult)
 INSERT INTO traces (
-    from_requirement_id, to_requirement_id, from_type, to_type,
+    from_requirement_id, to_requirement_id,
     created_by, created_at
 ) VALUES
     -- UR-1 traces to multiple SRs (Login functionality)
-    ('UR-1', 'SR-1', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '45 days'),
-    ('UR-1', 'SR-6', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '45 days'),
-    ('UR-1', 'SR-21', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '30 days'),
-    ('UR-1', 'SR-55', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '19 hours'),
+    ('UR-1', 'SR-1', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '45 days'),
+    ('UR-1', 'SR-6', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '45 days'),
+    ('UR-1', 'SR-21', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '30 days'),
+    ('UR-1', 'SR-55', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '19 hours'),
 
     -- UR-2 traces (User Registration)
-    ('UR-2', 'SR-2', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '44 days'),
-    ('UR-2', 'SR-19', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '32 days'),
-    ('UR-2', 'SR-26', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '25 days'),
+    ('UR-2', 'SR-2', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '44 days'),
+    ('UR-2', 'SR-19', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '32 days'),
+    ('UR-2', 'SR-26', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '25 days'),
 
     -- UR-3 traces (Password Reset)
-    ('UR-3', 'SR-3', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '48 days'),
-    ('UR-3', 'SR-26', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '25 days'),
+    ('UR-3', 'SR-3', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '48 days'),
+    ('UR-3', 'SR-26', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '25 days'),
 
     -- UR-4 traces (Requirements Management)
-    ('UR-4', 'SR-4', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '42 days'),
-    ('UR-4', 'SR-14', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '35 days'),
+    ('UR-4', 'SR-4', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '42 days'),
+    ('UR-4', 'SR-14', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '35 days'),
 
     -- UR-5 traces (Audit Trail)
-    ('UR-5', 'SR-5', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '41 days'),
-    ('UR-5', 'SR-60', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '14 hours'),
+    ('UR-5', 'SR-5', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '41 days'),
+    ('UR-5', 'SR-60', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '14 hours'),
 
     -- UR-7 traces (Email Notifications)
-    ('UR-7', 'SR-26', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '40 days'),
-    ('UR-7', 'SR-24', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '27 days'),
+    ('UR-7', 'SR-26', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '40 days'),
+    ('UR-7', 'SR-24', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '27 days'),
 
     -- UR-8 traces (Dashboard Analytics)
-    ('UR-8', 'SR-91', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '15 seconds'),
-    ('UR-8', 'SR-92', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '10 seconds'),
-    ('UR-8', 'SR-17', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '33 days'),
+    ('UR-8', 'SR-91', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '15 seconds'),
+    ('UR-8', 'SR-92', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '10 seconds'),
+    ('UR-8', 'SR-17', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '33 days'),
 
     -- UR-10 traces (Search Functionality)
-    ('UR-10', 'SR-31', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '20 days'),
+    ('UR-10', 'SR-31', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '20 days'),
 
     -- UR-11 traces (Role-Based Access Control)
-    ('UR-11', 'SR-52', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '22 hours'),
-    ('UR-11', 'SR-34', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '17 days'),
+    ('UR-11', 'SR-52', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '22 hours'),
+    ('UR-11', 'SR-34', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '17 days'),
 
     -- UR-13 traces (Mobile Responsive Design)
-    ('UR-13', 'SR-100', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW()),
-    ('UR-13', 'SR-13', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '36 days'),
+    ('UR-13', 'SR-100', '11111111-1111-1111-1111-111111111111', NOW()),
+    ('UR-13', 'SR-13', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '36 days'),
 
     -- UR-14 traces (Batch Operations)
-    ('UR-14', 'SR-24', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '27 days'),
-    ('UR-14', 'SR-35', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '16 days'),
+    ('UR-14', 'SR-24', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '27 days'),
+    ('UR-14', 'SR-35', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '16 days'),
 
     -- UR-16 traces (User Profile Management)
-    ('UR-16', 'SR-61', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '13 hours'),
-    ('UR-16', 'SR-62', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '12 hours'),
+    ('UR-16', 'SR-61', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '13 hours'),
+    ('UR-16', 'SR-62', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '12 hours'),
 
     -- UR-17 traces (Report Generation)
-    ('UR-17', 'SR-27', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '24 days'),
-    ('UR-17', 'SR-28', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '23 days'),
-    ('UR-17', 'SR-93', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '5 seconds'),
+    ('UR-17', 'SR-27', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '24 days'),
+    ('UR-17', 'SR-28', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '23 days'),
+    ('UR-17', 'SR-93', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '5 seconds'),
 
     -- UR-19 traces (Collaboration Features)
-    ('UR-19', 'SR-23', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '28 days'),
-    ('UR-19', 'SR-43', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '8 days'),
+    ('UR-19', 'SR-23', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '28 days'),
+    ('UR-19', 'SR-43', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '8 days'),
 
     -- UR-20 traces (Performance Monitoring)
-    ('UR-20', 'SR-16', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '34 days'),
-    ('UR-20', 'SR-17', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '33 days'),
-    ('UR-20', 'SR-39', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '12 days'),
-    ('UR-20', 'SR-40', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '11 days'),
+    ('UR-20', 'SR-16', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '34 days'),
+    ('UR-20', 'SR-17', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '33 days'),
+    ('UR-20', 'SR-39', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '12 days'),
+    ('UR-20', 'SR-40', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '11 days'),
 
     -- UR-22 traces (Backup and Recovery)
-    ('UR-22', 'SR-30', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '21 days'),
+    ('UR-22', 'SR-30', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '21 days'),
 
     -- UR-23 traces (Internationalization Support)
-    ('UR-23', 'SR-79', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '30 minutes'),
-    ('UR-23', 'SR-80', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '25 minutes'),
-    ('UR-23', 'SR-81', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '20 minutes'),
+    ('UR-23', 'SR-79', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '30 minutes'),
+    ('UR-23', 'SR-80', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '25 minutes'),
+    ('UR-23', 'SR-81', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '20 minutes'),
 
     -- UR-25 traces (Calendar Integration)
-    ('UR-25', 'SR-81', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '20 minutes'),
+    ('UR-25', 'SR-81', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '20 minutes'),
 
     -- UR-26 traces (Third-Party Authentication)
-    ('UR-26', 'SR-22', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '29 days'),
-    ('UR-26', 'SR-53', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '21 hours'),
-    ('UR-26', 'SR-54', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '20 hours'),
+    ('UR-26', 'SR-22', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '29 days'),
+    ('UR-26', 'SR-53', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '21 hours'),
+    ('UR-26', 'SR-54', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '20 hours'),
 
     -- UR-28 traces (Activity Logging)
-    ('UR-28', 'SR-15', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '36 days'),
-    ('UR-28', 'SR-60', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '14 hours'),
+    ('UR-28', 'SR-15', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '36 days'),
+    ('UR-28', 'SR-60', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '14 hours'),
 
     -- UR-29 traces (Template Management)
-    ('UR-29', 'SR-25', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '26 days'),
+    ('UR-29', 'SR-25', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '26 days'),
 
     -- UR-31 traces (Document Management)
-    ('UR-31', 'SR-25', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '26 days'),
-    ('UR-31', 'SR-27', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '24 days'),
+    ('UR-31', 'SR-25', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '26 days'),
+    ('UR-31', 'SR-27', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '24 days'),
 
     -- UR-32 traces (Change History Tracking)
-    ('UR-32', 'SR-5', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '41 days'),
-    ('UR-32', 'SR-18', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '33 days'),
+    ('UR-32', 'SR-5', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '41 days'),
+    ('UR-32', 'SR-18', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '33 days'),
 
     -- UR-34 traces (User Permissions Matrix)
-    ('UR-34', 'SR-52', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '22 hours'),
-    ('UR-34', 'SR-59', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '15 hours'),
+    ('UR-34', 'SR-52', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '22 hours'),
+    ('UR-34', 'SR-59', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '15 hours'),
 
     -- UR-35 traces (Bulk Import Export)
-    ('UR-35', 'SR-28', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '23 days'),
-    ('UR-35', 'SR-74', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '80 minutes'),
+    ('UR-35', 'SR-28', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '23 days'),
+    ('UR-35', 'SR-74', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '80 minutes'),
 
     -- UR-37 traces (Custom Fields)
-    ('UR-37', 'SR-4', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '42 days'),
+    ('UR-37', 'SR-4', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '42 days'),
 
     -- UR-38 traces (Advanced Filtering)
-    ('UR-38', 'SR-31', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '20 days'),
+    ('UR-38', 'SR-31', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '20 days'),
 
     -- UR-40 traces (Impact Analysis)
-    ('UR-40', 'SR-94', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '4 seconds'),
-    ('UR-40', 'SR-95', 'user', 'system', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '3 seconds');
+    ('UR-40', 'SR-94', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '4 seconds'),
+    ('UR-40', 'SR-95', '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '3 seconds');
 
 -- Display summary of created data
 SELECT 'USER requireMENTS' as category, count(*) as total,
@@ -678,18 +679,19 @@ INSERT INTO testing.test_steps (test_case_id, step_number, action, expected_resu
 SELECT setval('test_case_seq', 8, true);
 
 -- Link test cases to system requirements using traces table
-INSERT INTO traces (from_requirement_id, to_requirement_id, from_type, to_type, created_by) VALUES
+-- Types are determined from ID prefixes: SR- (system), TC- (testcase)
+INSERT INTO traces (from_requirement_id, to_requirement_id, created_by) VALUES
     -- Traces from System Requirements to Test Cases
-    ('SR-1', 'TC-1', 'system', 'testcase', '11111111-1111-1111-1111-111111111111'),
-    ('SR-1', 'TC-2', 'system', 'testcase', '11111111-1111-1111-1111-111111111111'),
-    ('SR-2', 'TC-1', 'system', 'testcase', '11111111-1111-1111-1111-111111111111'),
-    ('SR-3', 'TC-3', 'system', 'testcase', '11111111-1111-1111-1111-111111111111'),
-    ('SR-4', 'TC-4', 'system', 'testcase', '11111111-1111-1111-1111-111111111111'),
-    ('SR-4', 'TC-5', 'system', 'testcase', '11111111-1111-1111-1111-111111111111'),
-    ('SR-5', 'TC-5', 'system', 'testcase', '11111111-1111-1111-1111-111111111111'),
-    ('SR-6', 'TC-6', 'system', 'testcase', '11111111-1111-1111-1111-111111111111'),
-    ('SR-10', 'TC-7', 'system', 'testcase', '11111111-1111-1111-1111-111111111111'),
-    ('SR-15', 'TC-8', 'system', 'testcase', '11111111-1111-1111-1111-111111111111');
+    ('SR-1', 'TC-1', '11111111-1111-1111-1111-111111111111'),
+    ('SR-1', 'TC-2', '11111111-1111-1111-1111-111111111111'),
+    ('SR-2', 'TC-1', '11111111-1111-1111-1111-111111111111'),
+    ('SR-3', 'TC-3', '11111111-1111-1111-1111-111111111111'),
+    ('SR-4', 'TC-4', '11111111-1111-1111-1111-111111111111'),
+    ('SR-4', 'TC-5', '11111111-1111-1111-1111-111111111111'),
+    ('SR-5', 'TC-5', '11111111-1111-1111-1111-111111111111'),
+    ('SR-6', 'TC-6', '11111111-1111-1111-1111-111111111111'),
+    ('SR-10', 'TC-7', '11111111-1111-1111-1111-111111111111'),
+    ('SR-15', 'TC-8', '11111111-1111-1111-1111-111111111111');
 
 -- Insert sample test runs
 INSERT INTO testing.test_runs (id, name, description, status, overall_result, created_at, created_by, approved_at, approved_by) VALUES
@@ -846,12 +848,11 @@ ON CONFLICT DO NOTHING;
 
 -- Insert system-generated traces FROM test cases TO test results for approved test runs
 -- These traces are automatically created when a test run is approved
-INSERT INTO traces (from_requirement_id, to_requirement_id, from_type, to_type, created_by, is_system_generated)
+-- Types are determined from ID prefixes: TC- (testcase), TRES- (testresult)
+INSERT INTO traces (from_requirement_id, to_requirement_id, created_by, is_system_generated)
 SELECT
     tr.test_case_id,
     tr.id,
-    'testcase',
-    'testresult',
     '11111111-1111-1111-1111-111111111111',
     TRUE
 FROM testing.test_results tr

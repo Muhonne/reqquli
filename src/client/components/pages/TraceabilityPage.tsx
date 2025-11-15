@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../templates';
-import { Spinner, Text } from '../atoms';
+import { Spinner, Text, Button, Stack } from '../atoms';
 import { tracesApi } from '../../services/api';
 import * as d3 from 'd3';
 
@@ -9,8 +9,9 @@ interface Trace {
   id: string;
   fromId: string;
   toId: string;
-  fromType: 'user' | 'system' | 'testcase';
-  toType: 'user' | 'system' | 'testcase';
+  // Types are computed from ID prefixes, may be optional in API response
+  fromType?: 'user' | 'system' | 'testcase' | 'risk' | 'testresult';
+  toType?: 'user' | 'system' | 'testcase' | 'risk' | 'testresult';
   fromTitle: string;
   toTitle: string;
   fromStatus: string;
@@ -35,9 +36,8 @@ export function TraceabilityPage() {
     try {
       setLoading(true);
       const response = await tracesApi.getAllTraces();
-      setTraces(response.traces);
-    } catch (err) {
-      console.error('Failed to fetch traces:', err);
+      setTraces(response.traces as Trace[]);
+    } catch {
       setError('Failed to load traces');
     } finally {
       setLoading(false);
@@ -52,10 +52,22 @@ export function TraceabilityPage() {
         return `/system-requirements/${id}`;
       case 'testcase':
         return `/test-cases/${id}`;
+      case 'risk':
+        return `/risks/${id}`;
       default:
         return '#';
     }
   };
+
+  // Helper to determine type from ID prefix
+  const getTypeFromId = useCallback((id: string): string => {
+    if (id?.startsWith('UR-')) {return 'user';}
+    if (id?.startsWith('SR-')) {return 'system';}
+    if (id?.startsWith('RISK-')) {return 'risk';}
+    if (id?.startsWith('TC-')) {return 'testcase';}
+    if (id?.startsWith('TRES-')) {return 'testresult';}
+    return 'system'; // default
+  }, []);
 
   const processedData = useMemo(() => {
     if (!traces.length) {return null;}
@@ -63,13 +75,17 @@ export function TraceabilityPage() {
     const nodes = new Map<string, { id: string; type: string; title: string; status: string }>();
 
     traces.forEach(trace => {
-      const fromKey = `${trace.fromType}:${trace.fromId}`;
-      const toKey = `${trace.toType}:${trace.toId}`;
+      // Determine types from IDs if not provided
+      const fromType = trace.fromType || getTypeFromId(trace.fromId);
+      const toType = trace.toType || getTypeFromId(trace.toId);
+      
+      const fromKey = `${fromType}:${trace.fromId}`;
+      const toKey = `${toType}:${trace.toId}`;
 
       if (!nodes.has(fromKey)) {
         nodes.set(fromKey, {
           id: trace.fromId,
-          type: trace.fromType,
+          type: fromType,
           title: trace.fromTitle,
           status: trace.fromStatus
         });
@@ -77,7 +93,7 @@ export function TraceabilityPage() {
       if (!nodes.has(toKey)) {
         nodes.set(toKey, {
           id: trace.toId,
-          type: trace.toType,
+          type: toType,
           title: trace.toTitle,
           status: trace.toStatus
         });
@@ -89,10 +105,17 @@ export function TraceabilityPage() {
       ...value
     }));
 
-    return { nodes: nodeArray, edges: traces };
-  }, [traces]);
+    // Ensure edges have computed types
+    const edgesWithTypes = traces.map(trace => ({
+      ...trace,
+      fromType: trace.fromType || getTypeFromId(trace.fromId),
+      toType: trace.toType || getTypeFromId(trace.toId)
+    }));
 
-  const drawSankeyDiagram = () => {
+    return { nodes: nodeArray, edges: edgesWithTypes };
+  }, [traces, getTypeFromId]);
+
+  const drawSankeyDiagram = useCallback(() => {
     if (!svgRef.current || !processedData) {return;}
 
     const svg = d3.select(svgRef.current);
@@ -429,12 +452,12 @@ export function TraceabilityPage() {
       }
     });
 
-  };
+  }, [processedData, navigate]);
 
   useEffect(() => {
     if (!processedData) {return;}
     drawSankeyDiagram();
-  }, [processedData]);
+  }, [processedData, drawSankeyDiagram]);
 
   if (loading) {
     return (
@@ -449,11 +472,20 @@ export function TraceabilityPage() {
   if (error) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <Text color="secondary">{error}</Text>
-          </div>
-        </div>
+        <Stack align="center" justify="center" className="h-full">
+          <Stack align="center" spacing="md">
+            <Text className="text-red-600">Error: {error}</Text>
+            <Button 
+              onClick={() => {
+                setError(null);
+                fetchTraces();
+              }}
+              variant="secondary"
+            >
+              Try again
+            </Button>
+          </Stack>
+        </Stack>
       </AppLayout>
     );
   }
