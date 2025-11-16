@@ -6,7 +6,7 @@ import { Checkbox } from '../atoms/Checkbox';
 import { Stack } from '../atoms/Stack';
 import { FormField } from '../molecules/FormField';
 import { LoadingState } from '../molecules/LoadingState';
-import { RequirementsListControls } from './RequirementsListControls';
+import { ItemListControls } from './ItemListControls';
 import { CheckCircle, Clock, ChevronRight } from 'lucide-react';
 import { ListItemStyle } from '../atoms/ListItemStyle';
 import useTestRunStore from '../../stores/testRunStore';
@@ -204,8 +204,8 @@ export const TestRunForm: React.FC<TestRunFormProps> = ({ onSubmit, onCancel }) 
 
         <FormField label="Select Test Cases" required error={errors.testCases}>
           <div className="border border-gray-200 rounded-lg">
-            {/* Use the same RequirementsListControls component */}
-            <RequirementsListControls
+            {/* Use the same ItemListControls component */}
+            <ItemListControls
               search={filters.search}
               status={filters.status}
               totalCount={filteredTestCases.length}

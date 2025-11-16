@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Modal } from './Modal';
 import { Button } from '../atoms/Button';
 import { Badge } from '../atoms/Badge';
 import { Textarea } from '../atoms/Textarea';
 import { Text } from '../atoms/Text';
-import { ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, X, Download } from 'lucide-react';
 import { TestRunCase, TestStep, TestStepResult, StepStatus } from '../../../types/test-runs';
 import useTestRunStore from '../../stores/testRunStore';
 
@@ -27,27 +27,73 @@ export function TestExecutionModal({
   stepResults,
   isLocked
 }: TestExecutionModalProps) {
-  const { updateStepResult, uploadEvidence, savingStepResult } = useTestRunStore();
+  const { 
+    updateStepResult, 
+    uploadEvidence, 
+    downloadEvidence,
+    executeTestCase,
+    savingStepResult,
+    error
+  } = useTestRunStore();
+  
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [tempResult, setTempResult] = useState<{ status: StepStatus; actualResult: string }>({
+  const [tempResult, setTempResult] = useState<{ status: StepStatus; actualResult: string; evidenceFileId?: string }>({
     status: 'not_executed',
     actualResult: ''
   });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const currentStep = testSteps[currentStepIndex];
   const totalSteps = testSteps.length;
 
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStepIndex(0);
+      setHasUnsavedChanges(false);
+      setSaveError(null);
+      
+      // Execute test case if it hasn't been started yet
+      if (testRunCase.status === 'not_started') {
+        executeTestCase(testRunId, testRunCase.testCaseId).catch(() => {
+          // Error is handled in store
+        });
+      }
+    } else {
+      // Reset to first step when modal closes
+      setCurrentStepIndex(0);
+      setHasUnsavedChanges(false);
+      setSaveError(null);
+    }
+  }, [isOpen, testRunId, testRunCase.testCaseId, testRunCase.status, executeTestCase]);
+
+  // Load step result when step changes
   useEffect(() => {
     if (isOpen && currentStep) {
       const existingResult = (stepResults || []).find(sr => sr && sr.stepNumber === currentStep.stepNumber);
       setTempResult({
         status: existingResult?.status || 'not_executed',
-        actualResult: existingResult?.actualResult || ''
+        actualResult: existingResult?.actualResult || '',
+        evidenceFileId: existingResult?.evidenceFileId
       });
       setHasUnsavedChanges(false);
+      setSaveError(null);
     }
   }, [isOpen, currentStepIndex, currentStep, stepResults]);
+
+  // Focus textarea when step changes (only if modal is open and not locked)
+  useEffect(() => {
+    if (isOpen && !isLocked && currentStep && textareaRef.current) {
+      // Small delay to ensure the DOM has updated
+      const timeoutId = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isOpen, isLocked, currentStepIndex, currentStep]);
 
   const handlePreviousStep = useCallback(() => {
     if (currentStepIndex > 0) {
@@ -72,10 +118,24 @@ export function TestExecutionModal({
   const handleSaveStep = useCallback(async () => {
     if (!currentStep) {return;}
 
+    // Don't allow saving with 'not_executed' status
+    if (tempResult.status === 'not_executed') {
+      setSaveError('Please select a status (PASS or FAIL) before saving.');
+      return;
+    }
+
+    // Require actual result
+    if (!tempResult.actualResult || tempResult.actualResult.trim() === '') {
+      setSaveError('Please provide an actual result before saving.');
+      return;
+    }
+
+    setSaveError(null);
+
     try {
       await updateStepResult(testRunId, testRunCase.testCaseId, currentStep.stepNumber, {
         status: tempResult.status,
-        actualResult: tempResult.actualResult || 'No details provided'
+        actualResult: tempResult.actualResult.trim()
       });
 
       setHasUnsavedChanges(false);
@@ -84,35 +144,59 @@ export function TestExecutionModal({
       if (currentStepIndex < totalSteps - 1) {
         setCurrentStepIndex(currentStepIndex + 1);
       }
-    } catch {
-      // Error handling silently - auto-advance is not critical
+    } catch (err) {
+      setSaveError('Failed to save step result. Please try again.');
+      console.error('Error saving step result:', err);
     }
   }, [currentStep, testRunId, testRunCase.testCaseId, tempResult, updateStepResult, currentStepIndex, totalSteps]);
 
   const handleFileUpload = useCallback(async (file: File) => {
     if (!currentStep) {return;}
 
+    setUploadingFile(true);
+    setSaveError(null);
+
     try {
       const fileId = await uploadEvidence(testRunId, testRunCase.testCaseId, currentStep.stepNumber, file);
+      
+      // Update the step result with the evidence file ID, preserving current status and actual result
       await updateStepResult(testRunId, testRunCase.testCaseId, currentStep.stepNumber, {
-        ...tempResult,
+        status: tempResult.status === 'not_executed' ? 'pass' : tempResult.status,
+        actualResult: tempResult.actualResult || 'Evidence uploaded',
         evidenceFileId: fileId
       });
-    } catch {
-      // Error uploading evidence - non-critical failure
+      
+      // Update local state to reflect the evidence upload
+      setTempResult(prev => ({ ...prev, evidenceFileId: fileId }));
+      setHasUnsavedChanges(false);
+    } catch (err) {
+      setSaveError('Failed to upload evidence file. Please try again.');
+      console.error('Error uploading evidence:', err);
+    } finally {
+      setUploadingFile(false);
     }
   }, [currentStep, testRunId, testRunCase.testCaseId, tempResult, uploadEvidence, updateStepResult]);
+
+  const handleDownloadEvidence = useCallback(async (fileId: string) => {
+    try {
+      await downloadEvidence(fileId);
+    } catch (err) {
+      setSaveError('Failed to download evidence file.');
+      console.error('Error downloading evidence:', err);
+    }
+  }, [downloadEvidence]);
 
   const handleStatusChange = useCallback((status: StepStatus) => {
     setTempResult(prev => ({ ...prev, status }));
     setHasUnsavedChanges(true);
+    setSaveError(null);
   }, []);
 
   const handleActualResultChange = useCallback((actualResult: string) => {
     setTempResult(prev => ({ ...prev, actualResult }));
     setHasUnsavedChanges(true);
+    setSaveError(null);
   }, []);
-
 
   const getStatusBadge = (status: StepStatus) => {
     switch (status) {
@@ -124,6 +208,11 @@ export function TestExecutionModal({
         return <Badge variant="neutral">NOT EXECUTED</Badge>;
     }
   };
+
+  const currentStepResult = useMemo(() => {
+    if (!currentStep) {return null;}
+    return (stepResults || []).find(sr => sr && sr.stepNumber === currentStep.stepNumber);
+  }, [currentStep, stepResults]);
 
   const customTitle = useMemo(() => (
     <div className="flex items-center justify-between w-full">
@@ -140,7 +229,7 @@ export function TestExecutionModal({
           variant="secondary"
           size="sm"
           onClick={handlePreviousStep}
-          disabled={currentStepIndex === 0}
+          disabled={currentStepIndex === 0 || savingStepResult}
           testid="step-previous"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -150,7 +239,7 @@ export function TestExecutionModal({
           variant="secondary"
           size="sm"
           onClick={handleNextStep}
-          disabled={currentStepIndex === totalSteps - 1}
+          disabled={currentStepIndex === totalSteps - 1 || savingStepResult}
           testid="step-next"
         >
           Next
@@ -158,9 +247,13 @@ export function TestExecutionModal({
         </Button>
       </div>
     </div>
-  ), [testRunCase.testCase?.title, testRunCase.testCaseId, currentStepIndex, totalSteps, handlePreviousStep, handleNextStep]);
+  ), [testRunCase.testCase?.title, testRunCase.testCaseId, currentStepIndex, totalSteps, handlePreviousStep, handleNextStep, savingStepResult]);
 
   if (!currentStep) {return null;}
+
+  const canSave = hasUnsavedChanges && 
+                  tempResult.status !== 'not_executed' && 
+                  tempResult.actualResult.trim() !== '';
 
   return (
     <Modal
@@ -174,6 +267,13 @@ export function TestExecutionModal({
         {/* Step content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="space-y-6">
+            {/* Error message */}
+            {(saveError || error) && (
+              <div className="bg-red-50 border border-red-200 rounded p-3">
+                <Text className="text-red-600 text-sm">{saveError || error}</Text>
+              </div>
+            )}
+
             {/* Step details */}
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="grid grid-cols-2 gap-4">
@@ -199,13 +299,15 @@ export function TestExecutionModal({
                 <div>
                   <label className="block mb-2">
                     <Text weight="semibold">Actual Result</Text>
+                    <Text className="text-xs text-gray-500 ml-1">(required)</Text>
                   </label>
                   <Textarea
+                    ref={textareaRef}
                     value={tempResult.actualResult}
                     onChange={(e) => handleActualResultChange(e.target.value)}
-                    rows={2}
+                    rows={4}
                     placeholder="Describe what actually happened..."
-                    disabled={savingStepResult}
+                    disabled={savingStepResult || uploadingFile}
                     testid="step-actual-result"
                   />
                 </div>
@@ -215,71 +317,84 @@ export function TestExecutionModal({
                     <label className="block mb-2">
                       <Text weight="semibold">Evidence</Text>
                     </label>
-                    <div className="relative">
-                      <input
-                        type="file"
-                        id="evidence-upload"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {handleFileUpload(file);}
-                        }}
-                        accept="image/*,.pdf,.doc,.docx,.txt"
-                        disabled={savingStepResult}
-                        className="hidden"
-                        data-testid="evidence-upload"
-                      />
-                      <label
-                        htmlFor="evidence-upload"
-                        className={`inline-block px-4 py-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 cursor-pointer transition-colors ${
-                          savingStepResult ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        Choose File
-                      </label>
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <input
+                          type="file"
+                          id="evidence-upload"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {handleFileUpload(file);}
+                            // Reset input so same file can be selected again
+                            e.target.value = '';
+                          }}
+                          accept="image/*,.pdf,.doc,.docx,.txt"
+                          disabled={savingStepResult || uploadingFile}
+                          className="hidden"
+                          data-testid="evidence-upload"
+                        />
+                        <label
+                          htmlFor="evidence-upload"
+                          className={`inline-block px-4 py-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 cursor-pointer transition-colors rounded ${
+                            savingStepResult || uploadingFile ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                        >
+                          {uploadingFile ? 'Uploading...' : 'Choose File'}
+                        </label>
+                      </div>
+                      {currentStepResult?.evidenceFileId && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Text className="text-gray-600">Evidence uploaded</Text>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleDownloadEvidence(currentStepResult.evidenceFileId!)}
+                            disabled={savingStepResult}
+                          >
+                            <Download className="h-3 w-3" />
+                            Download
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div>
                     <label className="block mb-2">
                       <Text weight="semibold">Status</Text>
+                      <Text className="text-xs text-gray-500 ml-1">(required)</Text>
                     </label>
                     <div className="flex gap-2">
-                      <button
+                      <Button
                         onClick={() => handleStatusChange('not_executed')}
-                        disabled={savingStepResult}
-                        className={`px-4 py-2 border transition-all ${
-                          tempResult.status === 'not_executed'
-                            ? 'bg-gray-50 text-gray-700 border-gray-300 font-semibold'
-                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                        } ${savingStepResult ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        data-testid="status-not-executed"
+                        disabled={savingStepResult || uploadingFile}
+                        variant={tempResult.status === 'not_executed' ? 'primary' : 'secondary'}
+                        size="sm"
+                        className={tempResult.status === 'not_executed' ? '' : 'text-gray-500'}
+                        testid="status-not-executed"
                       >
                         NOT EXECUTED
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => handleStatusChange('pass')}
-                        disabled={savingStepResult}
-                        className={`px-4 py-2 border transition-all ${
-                          tempResult.status === 'pass'
-                            ? 'bg-green-50 text-green-700 border-green-300 font-semibold'
-                            : 'bg-white text-gray-500 border-gray-200 hover:border-green-300 hover:bg-green-50'
-                        } ${savingStepResult ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        data-testid="status-pass"
+                        disabled={savingStepResult || uploadingFile}
+                        variant={tempResult.status === 'pass' ? 'primary' : 'secondary'}
+                        size="sm"
+                        className={tempResult.status === 'pass' ? 'bg-green-600 hover:bg-green-700 border-0' : 'text-gray-500'}
+                        testid="status-pass"
                       >
                         PASS
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => handleStatusChange('fail')}
-                        disabled={savingStepResult}
-                        className={`px-4 py-2 border transition-all ${
-                          tempResult.status === 'fail'
-                            ? 'bg-red-50 text-red-700 border-red-300 font-semibold'
-                            : 'bg-white text-gray-500 border-gray-200 hover:border-red-300 hover:bg-red-50'
-                        } ${savingStepResult ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        data-testid="status-fail"
+                        disabled={savingStepResult || uploadingFile}
+                        variant={tempResult.status === 'fail' ? 'primary' : 'secondary'}
+                        size="sm"
+                        className={tempResult.status === 'fail' ? 'bg-red-600 hover:bg-red-700 border-0' : 'text-gray-500'}
+                        testid="status-fail"
                       >
                         FAIL
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -302,6 +417,20 @@ export function TestExecutionModal({
                     </div>
                   </div>
                 )}
+
+                {currentStepResult?.evidenceFileId && (
+                  <div>
+                    <Text weight="semibold" className="mb-2">Evidence</Text>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleDownloadEvidence(currentStepResult.evidenceFileId!)}
+                    >
+                      <Download className="h-3 w-3" />
+                      Download Evidence
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -314,7 +443,7 @@ export function TestExecutionModal({
               <Button
                 variant="primary"
                 onClick={handleSaveStep}
-                disabled={savingStepResult || !hasUnsavedChanges}
+                disabled={savingStepResult || uploadingFile || !canSave}
                 testid="save-step"
               >
                 <Save className="h-4 w-4" />
@@ -325,6 +454,7 @@ export function TestExecutionModal({
             <Button
               variant="secondary"
               onClick={onClose}
+              disabled={savingStepResult || uploadingFile}
               testid="close-modal"
             >
               <X className="h-4 w-4" />

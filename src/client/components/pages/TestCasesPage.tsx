@@ -4,7 +4,7 @@ import { AppLayout, SplitPanelLayout } from '../templates';
 import { Button, Text, Stack } from '../atoms';
 import { ItemList } from '../organisms/ItemList';
 import { TestCaseForm } from '../organisms/TestCaseForm';
-import { RequirementsListControls } from '../organisms/RequirementsListControls';
+import { ItemListControls } from '../organisms/ItemListControls';
 import useTestRunStore from '../../stores/testRunStore';
 import { TestCase } from '../../../types/test-runs';
 
@@ -91,7 +91,7 @@ export function TestCasesPage() {
       itemType="test"
       totalCount={testCasePagination.total}
       filters={
-        <RequirementsListControls
+        <ItemListControls
           search={testCaseFilters.search}
           status={testCaseFilters.status}
           totalCount={testCasePagination.total}

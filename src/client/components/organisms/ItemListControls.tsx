@@ -7,7 +7,7 @@ interface StatusOption {
   label: string;
 }
 
-interface RequirementsListControlsProps {
+interface ItemListControlsProps {
   // Filter props
   search?: string;
   status?: string;
@@ -31,7 +31,7 @@ interface RequirementsListControlsProps {
   searchPlaceholder?: string;
 }
 
-function RequirementsListControlsComponent({
+function ItemListControlsComponent({
   search = '',
   status,
   totalCount: _totalCount,
@@ -50,7 +50,7 @@ function RequirementsListControlsComponent({
     { value: 'draft', label: 'Draft' }
   ],
   searchPlaceholder = 'Search requirements...'
-}: RequirementsListControlsProps) {
+}: ItemListControlsProps) {
   const [searchTerm, setSearchTerm] = useState(search);
   const searchDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -205,4 +205,4 @@ function RequirementsListControlsComponent({
   );
 }
 
-export const RequirementsListControls = memo(RequirementsListControlsComponent);
+export const ItemListControls = memo(ItemListControlsComponent);

@@ -1,6 +1,6 @@
 export { Sidebar } from './Sidebar'
 export { ItemList } from './ItemList'
-export { RequirementsListControls } from './RequirementsListControls'
+export { ItemListControls } from './ItemListControls'
 export { RequirementForm } from './RequirementForm'
 export { RiskForm } from './RiskForm'
 export { LeftPanel } from './LeftPanel'

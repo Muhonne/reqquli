@@ -5,7 +5,7 @@ import { SplitPanelLayout } from '../templates/SplitPanelLayout';
 import { ItemList } from '../organisms/ItemList';
 import { TestRunDetail } from '../organisms/TestRunDetail';
 import { TestRunForm } from '../organisms/TestRunForm';
-import { RequirementsListControls } from '../organisms/RequirementsListControls';
+import { ItemListControls } from '../organisms/ItemListControls';
 import { Modal } from '../molecules/Modal';
 import { Button, Text, Stack } from '../atoms';
 import useTestRunStore from '../../stores/testRunStore';
@@ -30,9 +30,10 @@ export const TestRunsPage: React.FC = () => {
     clearError
   } = useTestRunStore();
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchTestRuns();
-  }, [testRunFilters, fetchTestRuns]);
+  }, [fetchTestRuns]);
 
   useEffect(() => {
     if (runId) {
@@ -55,25 +56,39 @@ export const TestRunsPage: React.FC = () => {
   };
 
   const handleSearchChange = useCallback((search: string | undefined) => {
-    setTestRunFilters({ search, page: 1 });
-  }, [setTestRunFilters]);
+    const newFilters = { ...testRunFilters, search, page: 1 };
+    setTestRunFilters(newFilters);
+    fetchTestRuns(newFilters);
+  }, [testRunFilters, setTestRunFilters, fetchTestRuns]);
 
   const handleStatusChange = useCallback((status: TestRunStatus | 'not_started' | 'in_progress' | 'complete' | 'approved' | undefined) => {
-    setTestRunFilters({ status: status as TestRunStatus, page: 1 });
-  }, [setTestRunFilters]);
+    const newFilters = { ...testRunFilters, status: status as TestRunStatus, page: 1 };
+    setTestRunFilters(newFilters);
+    fetchTestRuns(newFilters);
+  }, [testRunFilters, setTestRunFilters, fetchTestRuns]);
 
   const handlePageChange = useCallback((page: number) => {
-    setTestRunFilters({ page });
-  }, [setTestRunFilters]);
+    const newFilters = { ...testRunFilters, page };
+    setTestRunFilters(newFilters);
+    fetchTestRuns(newFilters);
+  }, [testRunFilters, setTestRunFilters, fetchTestRuns]);
 
   const handleSortChange = useCallback((sort: 'lastModified' | 'createdAt' | 'approvedAt', order: 'asc' | 'desc') => {
-    const sortMap = {
+    // Map sort values to backend-compatible values
+    const sortMap: Record<string, 'createdAt' | 'lastModified' | 'approvedAt'> = {
       'lastModified': 'lastModified',
       'createdAt': 'createdAt',
-      'approvedAt': 'createdAt'
+      'approvedAt': 'approvedAt'
     };
-    setTestRunFilters({ sort: sortMap[sort] as 'createdAt' | 'lastModified', order, page: 1 });
-  }, [setTestRunFilters]);
+    const newFilters = { 
+      ...testRunFilters, 
+      sort: sortMap[sort] || 'lastModified', 
+      order, 
+      page: 1 
+    };
+    setTestRunFilters(newFilters);
+    fetchTestRuns(newFilters);
+  }, [testRunFilters, setTestRunFilters, fetchTestRuns]);
 
 
   const rightPanel = useMemo(() => {
@@ -117,18 +132,18 @@ export const TestRunsPage: React.FC = () => {
             onCreateNew={() => setShowCreateModal(true)}
             loading={loading}
             selectedId={runId || null}
-            sortBy={testRunFilters.sort === 'lastModified' ? 'lastModified' : 'createdAt'}
+            sortBy={testRunFilters.sort === 'lastModified' ? 'lastModified' : testRunFilters.sort === 'approvedAt' ? 'approvedAt' : 'createdAt'}
             title="Test Runs"
             itemType="testrun"
             totalCount={testRunPagination?.total}
             filters={
-              <RequirementsListControls
+              <ItemListControls
                 search={testRunFilters.search}
                 status={testRunFilters.status as any}
                 totalCount={testRunPagination?.total || 0}
                 onSearchChange={handleSearchChange}
                 onStatusChange={handleStatusChange as any}
-                sortBy={testRunFilters.sort === 'lastModified' ? 'lastModified' : 'createdAt'}
+                sortBy={testRunFilters.sort === 'lastModified' ? 'lastModified' : testRunFilters.sort === 'approvedAt' ? 'approvedAt' : 'createdAt'}
                 sortOrder={testRunFilters.order}
                 onSortChange={handleSortChange}
                 currentPage={testRunPagination?.page || 1}

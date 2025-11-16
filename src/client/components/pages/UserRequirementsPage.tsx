@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ItemList,
   RequirementForm,
-  RequirementsListControls
+  ItemListControls
 } from '../organisms';
 import { AppLayout, SplitPanelLayout } from '../templates';
 import { Button, Text, Heading, Stack } from '../atoms';
@@ -100,7 +100,7 @@ export function UserRequirementsPage() {
       itemType="user"
       totalCount={pagination?.total}
       filters={
-        <RequirementsListControls
+        <ItemListControls
           search={filters?.search}
           status={filters?.status}
           totalCount={pagination?.total || 0}
