@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, Clock, ChevronRight, FileText, AlertTriangle, XCircle } from 'lucide-react';
 import { ListItemStyle } from '../atoms';
@@ -103,6 +103,7 @@ const ListItem = memo(({
         className={baseItemClassName}
         asChild
         testid={`risk-card-${riskItem.id}`}
+        data-item-id={riskItem.id}
       >
         <Link to={linkPath}>
           {itemContent}
@@ -171,6 +172,7 @@ const ListItem = memo(({
         onClick={() => onSelect?.(item)}
         className="px-6 py-4 border-b border-gray-100"
         testid={`test-run-item-${testRun.id}`}
+        data-item-id={testRun.id}
       >
         {itemContent}
       </ListItemStyle>
@@ -216,6 +218,7 @@ const ListItem = memo(({
         className={baseItemClassName}
         asChild
         testid={`requirement-card-${item.id}`}
+        data-item-id={item.id}
       >
         <Link to={linkPath}>
           {itemContent}
@@ -229,6 +232,7 @@ const ListItem = memo(({
         onClick={() => onSelect?.(item)}
         className={baseItemClassName}
         testid={`requirement-card-${item.id}`}
+        data-item-id={item.id}
       >
         {itemContent}
       </ListItemStyle>
@@ -261,6 +265,7 @@ function ItemListComponent<T extends ListableEntity | RiskRecord | TestRun>({
   totalCount,
   filters
 }: ItemListProps<T>) {
+  const listContainerRef = useRef<globalThis.HTMLDivElement>(null);
   
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) {return 'N/A';}
@@ -317,6 +322,45 @@ function ItemListComponent<T extends ListableEntity | RiskRecord | TestRun>({
   const isTestRequirement = itemType === 'test';
   const isRisk = itemType === 'risk';
   const isTestRun = itemType === 'testrun';
+
+  // Scroll active item into view when selectedId changes or items are loaded
+  useEffect(() => {
+    if (!selectedId || !listContainerRef.current || loading || items.length === 0) {
+      return;
+    }
+
+    // Check if the selected item is in the current items list
+    const itemExists = items.some(item => {
+      if (isRisk) {
+        return (item as unknown as RiskRecord).id === selectedId;
+      } else if (isTestRun) {
+        return (item as unknown as TestRun).id === selectedId;
+      } else {
+        return (item as unknown as ListableEntity).id === selectedId;
+      }
+    });
+
+    if (!itemExists) {
+      return;
+    }
+
+    // Use a small delay to ensure DOM is updated
+    const timeoutId = setTimeout(() => {
+      const activeElement = listContainerRef.current?.querySelector(
+        `[data-item-id="${selectedId}"]`
+      ) as HTMLElement;
+
+      if (activeElement) {
+        activeElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedId, loading, items, isRisk, isTestRun]);
 
   const renderItem = (item: T) => {
     let linkPath: string;
@@ -408,7 +452,7 @@ function ItemListComponent<T extends ListableEntity | RiskRecord | TestRun>({
           testid={isRisk ? "risks-empty-state" : isTestRun ? "test-runs-empty-state" : "items-empty-state"}
         />
       ) : (
-        <div>
+        <div ref={listContainerRef}>
           {items.map(renderItem)}
         </div>
       )}
@@ -417,4 +461,3 @@ function ItemListComponent<T extends ListableEntity | RiskRecord | TestRun>({
 }
 
 export const ItemList = memo(ItemListComponent) as typeof ItemListComponent;
-

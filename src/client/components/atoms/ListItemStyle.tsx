@@ -8,6 +8,7 @@ interface ListItemStyleProps {
   asChild?: boolean
   as?: React.ElementType
   testid?: string
+  [key: `data-${string}`]: string | undefined
 }
 
 const ListItemStyleComponent = ({
@@ -17,7 +18,8 @@ const ListItemStyleComponent = ({
   className = '',
   asChild = false,
   as: Component = 'div',
-  testid
+  testid,
+  ...restProps
 }: ListItemStyleProps) => {
   const baseStyles = 'cursor-pointer transition-all relative'
   
@@ -32,6 +34,14 @@ const ListItemStyleComponent = ({
 
   const combinedClassName = `${baseStyles} ${hoverStyles} ${className}`.trim()
 
+  // Extract data attributes from restProps
+  const dataAttributes: Record<string, string> = {};
+  Object.keys(restProps).forEach(key => {
+    if (key.startsWith('data-')) {
+      dataAttributes[key] = restProps[key as keyof typeof restProps] as string;
+    }
+  });
+
   if (asChild && React.isValidElement(children)) {
     const childProps = children.props as any;
     const newProps = {
@@ -39,7 +49,8 @@ const ListItemStyleComponent = ({
       className: `${childProps.className || ''} ${combinedClassName}`.trim(),
       style: { ...childProps.style, ...activeStyles },
       onClick: onClick || childProps.onClick,
-      'data-testid': testid
+      'data-testid': testid,
+      ...dataAttributes
     };
     return React.cloneElement(children as React.ReactElement<any>, newProps)
   }
@@ -50,6 +61,7 @@ const ListItemStyleComponent = ({
       className={combinedClassName}
       style={activeStyles}
       onClick={onClick}
+      {...dataAttributes}
     >
       {children}
     </Component>
